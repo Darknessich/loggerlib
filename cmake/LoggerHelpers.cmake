@@ -1,0 +1,8 @@
+function(logger_apply_warnings target)
+    if(LOGGER_ENABLE_WARNINGS)
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    if(LOGGER_ENABLE_WERROR)
+        target_compile_options(${target} PRIVATE -Werror)
+    endif()
+endfunction()

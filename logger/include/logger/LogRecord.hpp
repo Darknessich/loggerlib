@@ -19,4 +19,4 @@ namespace Logger {
     LOGGER_EXPORT std::optional<SLogRecord> parseRecord(std::string_view line);
     LOGGER_EXPORT std::string escapeMessage(std::string_view message);
     LOGGER_EXPORT std::string unescapeMessage(std::string_view message);
-} // Logger
+} // namespace Logger

@@ -13,6 +13,10 @@ option(LOGGER_BUILD_APP       "Build demo application"   OFF)
 option(LOGGER_BUILD_COLLECTOR "Build stats collector"    OFF)
 option(LOGGER_BUILD_TESTS     "Build unit tests"         ON)
 option(LOGGER_ENABLE_WARNINGS "-Wall -Wextra -Wpedantic" ON)
+option(LOGGER_ENABLE_WERROR   "-Werror"                  OFF)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(LoggerHelpers)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

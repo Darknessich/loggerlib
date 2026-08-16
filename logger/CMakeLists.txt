@@ -18,9 +18,7 @@ function(logger_configure target)
         OUTPUT_NAME logger
         CXX_VISIBILITY_PRESET hidden
         VISIBILITY_INLINES_HIDDEN ON)
-    if(LOGGER_ENABLE_WARNINGS)
-        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
-    endif()
+    logger_apply_warnings(${target})
 endfunction()
 
 logger_configure(logger_shared)

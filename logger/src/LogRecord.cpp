@@ -3,12 +3,16 @@
 #include <array>
 #include <charconv>
 #include <cstdio>
+#include <cstddef>
+#include <cstring>
 #include <ctime>
 
-namespace{
+namespace {
     constexpr std::size_t kStampSize = 23; // "YYYY-MM-DD HH:MM:SS.mmm"
+    constexpr char kUnknownStamp[] = "0000-00-00 00:00:00.000";
+    static_assert(sizeof(kUnknownStamp) == kStampSize + 1, "fallback stamp must be as wide as a real one");
 
-    bool parseInt(std::string_view text, int& out) noexcept {
+    [[nodiscard]] bool parseInt(std::string_view text, int& out) noexcept {
         const char* const first = text.data();
         const char* const last  = text.data() + text.size();
         const auto result = std::from_chars(first, last, out);
@@ -37,10 +41,10 @@ namespace{
             !parseInt(line.substr(14, 2), minute) || !parseInt(line.substr(17, 2), second)||
             !parseInt(line.substr(20, 3), millis)) return std::nullopt;
 
-        
+
         if (!isCorrectDate(year, month, day) ||
             hour   < 0 || hour   > 23 || minute < 0 || minute > 59 ||
-            second < 0 || second > 60 || millis < 0 || millis > 999) return std::nullopt;
+            second < 0 || second > 59 || millis < 0 || millis > 999) return std::nullopt;
 
         std::tm parts{};
         parts.tm_year = year - 1900; parts.tm_mon = month - 1; parts.tm_mday = day;
@@ -54,7 +58,7 @@ namespace{
                     std::chrono::system_clock::from_time_t(raw)
                     + std::chrono::milliseconds{millis}};
     }
-}
+} // namespace
 
 namespace Logger {
     std::string formatRecord(const SLogRecord& record) {
@@ -64,12 +68,15 @@ namespace Logger {
 
         std::tm parts{};
         char stamp[kStampSize + 1] = {};
-        if (::localtime_r(&raw, &parts) != nullptr) {
-            std::snprintf(stamp, sizeof(stamp), "%04d-%02d-%02d %02d:%02d:%02d.%03d",
-                        parts.tm_year + 1900, parts.tm_mon + 1, parts.tm_mday,
-                        parts.tm_hour, parts.tm_min, parts.tm_sec, static_cast<int>(millis));
-        } else {
-            std::snprintf(stamp, sizeof(stamp), "0000-00-00 00:00:00.000");
+
+        const int written = ::localtime_r(&raw, &parts) != nullptr
+            ? std::snprintf(stamp, sizeof(stamp), "%04d-%02d-%02d %02d:%02d:%02d.%03d",
+                            parts.tm_year + 1900, parts.tm_mon + 1, parts.tm_mday,
+                            parts.tm_hour, parts.tm_min, parts.tm_sec, static_cast<int>(millis))
+            : -1;
+
+        if (written != static_cast<int>(kStampSize)) {
+            std::memcpy(stamp, kUnknownStamp, sizeof(kUnknownStamp));
         }
 
         const std::string_view name = level2string(record.level);
@@ -133,4 +140,4 @@ namespace Logger {
         }
         return out;
     }
-} // Logger
+} // namespace Logger

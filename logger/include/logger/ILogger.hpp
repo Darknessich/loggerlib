@@ -17,4 +17,4 @@ namespace Logger {
             return level >= this->level();
         }
     };
-} // Logger
+} // namespace Logger

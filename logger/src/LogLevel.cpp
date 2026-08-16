@@ -1,6 +1,7 @@
 #include <logger/LogLevel.hpp>
 
 #include <array>
+#include <cstddef>
 
 namespace Logger {
     namespace {
@@ -9,8 +10,8 @@ namespace Logger {
             std::string_view name;
         };
 
-        inline constexpr std::size_t kCountLevels = static_cast<std::size_t>(ELogLevel::COUNT);
-        inline constexpr std::array<SLevelName, kCountLevels> kLevelNames{{
+        inline constexpr std::size_t kLevelCount = static_cast<std::size_t>(ELogLevel::COUNT);
+        inline constexpr std::array<SLevelName, kLevelCount> kLevelNames{{
             {ELogLevel::DEBUG, "DEBUG"},
             {ELogLevel::INFO, "INFO"},
             {ELogLevel::WARN, "WARN"},
@@ -19,7 +20,7 @@ namespace Logger {
         }};
 
         constexpr bool isTableOrdered() noexcept {
-            for (std::size_t i = 0; i < kCountLevels; ++i) {
+            for (std::size_t i = 0; i < kLevelCount; ++i) {
                 if (static_cast<std::size_t>(kLevelNames[i].level) != i)
                     return false;
             }
@@ -58,4 +59,4 @@ namespace Logger {
         }
         return std::nullopt;
     }
-} // Logger
+} // namespace Logger
