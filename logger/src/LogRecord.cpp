@@ -12,7 +12,7 @@ namespace {
     constexpr char kUnknownStamp[] = "0000-00-00 00:00:00.000";
     static_assert(sizeof(kUnknownStamp) == kStampSize + 1, "fallback stamp must be as wide as a real one");
 
-    [[nodiscard]] bool parseInt(std::string_view text, int& out) noexcept {
+    bool parseInt(std::string_view text, int& out) noexcept {
         const char* const first = text.data();
         const char* const last  = text.data() + text.size();
         const auto result = std::from_chars(first, last, out);

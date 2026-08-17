@@ -30,23 +30,30 @@ namespace {
 } // namespace
 
 TEST(log_record, formats_known_instants) {
-    CHECK_EQ(Logger::formatRecord({instant(0, 123), ELogLevel::INFO, "hello"}),
-             "1970-01-01 00:00:00.123 [INFO] hello");
+    CHECK_EQ(
+        Logger::formatRecord({instant(0, 123), ELogLevel::Info, "hello"}),
+        "1970-01-01 00:00:00.123 [INFO] hello"
+    );
 
-    CHECK_EQ(Logger::formatRecord({instant(1'000'000'000), ELogLevel::FATAL, "boom"}),
-             "2001-09-09 01:46:40.000 [FATAL] boom");
+    CHECK_EQ(
+        Logger::formatRecord({instant(1'000'000'000), ELogLevel::Fatal, "boom"}),
+        "2001-09-09 01:46:40.000 [FATAL] boom"
+    );
 }
 
 TEST(log_record, formats_empty_message) {
-    CHECK_EQ(Logger::formatRecord({instant(0), ELogLevel::WARN, ""}),
-             "1970-01-01 00:00:00.000 [WARN] ");
+    CHECK_EQ(
+        Logger::formatRecord({instant(0), ELogLevel::Warn, ""}),
+        "1970-01-01 00:00:00.000 [WARN] "
+    );
 }
 
 TEST(log_record, round_trips_through_format_and_parse) {
-    for (const std::string message : {"", "simple", "with  spaces", "юникод",
-                                      "a\nb", "a\rb", "back\\slash", "]", "[INFO] fake",
-                                      "trailing backslash \\"}) {
-        const SLogRecord original{instant(1'000'000'000, 456), ELogLevel::WARN, message};
+    for (const std::string message : {
+        "", "simple", "with  spaces", "юникод", "a\nb", "a\rb",
+        "back\\slash", "]", "[INFO] fake", "trailing backslash \\"
+    }) {
+        const SLogRecord original{instant(1'000'000'000, 456), ELogLevel::Warn, message};
 
         const auto parsed = Logger::parseRecord(Logger::formatRecord(original));
         if (!CHECK(parsed.has_value())) continue;
@@ -58,7 +65,7 @@ TEST(log_record, round_trips_through_format_and_parse) {
 }
 
 TEST(log_record, round_trips_every_level) {
-    for (std::size_t index = 0; index < static_cast<std::size_t>(ELogLevel::COUNT); ++index) {
+    for (std::size_t index = 0; index < static_cast<std::size_t>(ELogLevel::Count); ++index) {
         const SLogRecord original{instant(0), static_cast<ELogLevel>(index), "text"};
 
         const auto parsed = Logger::parseRecord(Logger::formatRecord(original));
@@ -77,8 +84,10 @@ TEST(log_record, escaping_is_reversible) {
 
     CHECK(Logger::escapeMessage("a\nb") != Logger::escapeMessage("a\\nb"));
 
-    for (const std::string text : {"", "plain", "a\nb", "a\rb", "a\\b", "\\", "\\\\",
-                                   "\\n", "смешанный \\ текст\n"}) {
+    for (const std::string text : {
+        "", "plain", "a\nb", "a\rb", "a\\b", "\\", "\\\\",
+        "\\n", "смешанный \\ текст\n"
+    }) {
         CHECK_EQ(Logger::unescapeMessage(Logger::escapeMessage(text)), text);
     }
 }
@@ -142,14 +151,18 @@ TEST(log_record, invalid_level_produces_unparseable_line) {
 }
 
 TEST(log_record, both_format_overloads_agree) {
-    const SLogRecord record{instant(1'000'000'000, 456), ELogLevel::WARN, "a\nb"};
-    CHECK_EQ(Logger::formatRecord(record),
-             Logger::formatRecord(record.time, record.level, record.message));
+    const SLogRecord record{instant(1'000'000'000, 456), ELogLevel::Warn, "a\nb"};
+    CHECK_EQ(
+        Logger::formatRecord(record),
+        Logger::formatRecord(record.time, record.level, record.message)
+    );
 }
 
 TEST(log_record, formats_a_view_without_a_terminator) {
     const char raw[] = {'H', 'E', 'L', 'L', 'O'};
     const std::string_view view{raw, sizeof(raw)};
-    CHECK_EQ(Logger::formatRecord(instant(0), ELogLevel::INFO, view),
-             "1970-01-01 00:00:00.000 [INFO] HELLO");
+    CHECK_EQ(
+        Logger::formatRecord(instant(0), ELogLevel::Info, view),
+        "1970-01-01 00:00:00.000 [INFO] HELLO"
+    );
 }

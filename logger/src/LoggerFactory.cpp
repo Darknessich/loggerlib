@@ -14,7 +14,7 @@ namespace Logger {
                      std::error_code& ec) {
         ec.clear();
 
-        if (static_cast<std::size_t>(level) >= static_cast<std::size_t>(ELogLevel::COUNT)) {
+        if (static_cast<std::size_t>(level) >= static_cast<std::size_t>(ELogLevel::Count)) {
             ec = std::make_error_code(std::errc::invalid_argument);
             return nullptr;
         }

@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
-option(LOGGER_BUILD_APP       "Build demo application"   OFF)
+option(LOGGER_BUILD_APP       "Build demo application"   ON)
 option(LOGGER_BUILD_COLLECTOR "Build stats collector"    OFF)
 option(LOGGER_BUILD_TESTS     "Build unit tests"         ON)
 option(LOGGER_ENABLE_WARNINGS "-Wall -Wextra -Wpedantic" ON)
@@ -21,6 +21,9 @@ include(LoggerHelpers)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 if(LOGGER_BUILD_TESTS)
     enable_testing()

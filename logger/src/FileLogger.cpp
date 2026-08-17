@@ -8,8 +8,7 @@ namespace Logger {
     {}
 
     bool FileLogger::writeLine(std::string_view line) {
-        m_fstream << line << '\n';
-        m_fstream.flush();
+        m_fstream << line << '\n' << std::flush;
         return m_fstream.good();
     }
 } // namespace Logger

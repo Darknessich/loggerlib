@@ -7,12 +7,12 @@
 
 namespace Logger {
     enum class ELogLevel {
-        DEBUG = 0,
-        INFO,
-        WARN,
-        ERROR,
-        FATAL,
-        COUNT // Number of levels. Always last
+        Debug = 0,
+        Info,
+        Warn,
+        Error,
+        Fatal,
+        Count // Number of levels. Always last
     };
 
     LOGGER_EXPORT std::string_view level2string(ELogLevel level) noexcept;

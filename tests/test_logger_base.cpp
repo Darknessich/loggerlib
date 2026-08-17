@@ -38,43 +38,45 @@ namespace {
 } // namespace
 
 TEST(logger_base, keeps_messages_at_or_above_the_threshold) {
-    RecordingLogger logger{ELogLevel::WARN};
+    RecordingLogger logger{ELogLevel::Warn};
 
-    CHECK(logger.log(ELogLevel::WARN, "warn"));
-    CHECK(logger.log(ELogLevel::ERROR, "error"));
-    CHECK(logger.log(ELogLevel::FATAL, "fatal"));
+    CHECK(logger.log(ELogLevel::Warn, "warn"));
+    CHECK(logger.log(ELogLevel::Error, "error"));
+    CHECK(logger.log(ELogLevel::Fatal, "fatal"));
 
     CHECK_EQ(logger.lines.size(), std::size_t{3});
 }
 
 TEST(logger_base, drops_messages_below_the_threshold) {
-    RecordingLogger logger{ELogLevel::WARN};
+    RecordingLogger logger{ELogLevel::Warn};
 
-    CHECK(logger.log(ELogLevel::DEBUG, "debug"));
-    CHECK(logger.log(ELogLevel::INFO, "info"));
+    CHECK(logger.log(ELogLevel::Debug, "debug"));
+    CHECK(logger.log(ELogLevel::Info, "info"));
 
     CHECK_EQ(logger.lines.size(), std::size_t{0});
 }
 
 TEST(logger_base, line_matches_format_record) {
-    RecordingLogger logger{ELogLevel::DEBUG};
-    CHECK(logger.log(ELogLevel::INFO, "hello"));
+    RecordingLogger logger{ELogLevel::Debug};
+    CHECK(logger.log(ELogLevel::Info, "hello"));
 
     REQUIRE_EQ(logger.lines.size(), std::size_t{1});
-    CHECK_EQ(logger.lines.front(),
-             Logger::formatRecord(RecordingLogger::fixedTime(), ELogLevel::INFO, "hello"));
+    CHECK_EQ(
+        logger.lines.front(),
+        Logger::formatRecord(RecordingLogger::fixedTime(), ELogLevel::Info, "hello")
+    );
 }
 
 TEST(logger_base, set_level_takes_effect_immediately) {
-    RecordingLogger logger{ELogLevel::WARN};
+    RecordingLogger logger{ELogLevel::Warn};
 
-    CHECK(logger.log(ELogLevel::INFO, "before"));
+    CHECK(logger.log(ELogLevel::Info, "before"));
     CHECK_EQ(logger.lines.size(), std::size_t{0});
 
-    logger.setLevel(ELogLevel::DEBUG);
-    CHECK_EQ(logger.level(), ELogLevel::DEBUG);
+    logger.setLevel(ELogLevel::Debug);
+    CHECK_EQ(logger.level(), ELogLevel::Debug);
 
-    CHECK(logger.log(ELogLevel::INFO, "after"));
+    CHECK(logger.log(ELogLevel::Info, "after"));
     REQUIRE_EQ(logger.lines.size(), std::size_t{1});
 
     const auto parsed = Logger::parseRecord(logger.lines.front());
@@ -83,20 +85,20 @@ TEST(logger_base, set_level_takes_effect_immediately) {
 }
 
 TEST(logger_base, propagates_write_failure) {
-    RecordingLogger logger{ELogLevel::DEBUG};
+    RecordingLogger logger{ELogLevel::Debug};
     logger.writeResult = false;
 
-    CHECK(!logger.log(ELogLevel::INFO, "doomed"));
+    CHECK(!logger.log(ELogLevel::Info, "doomed"));
     CHECK_EQ(logger.lines.size(), std::size_t{1});
 
-    logger.setLevel(ELogLevel::FATAL);
-    CHECK(logger.log(ELogLevel::INFO, "filtered"));
+    logger.setLevel(ELogLevel::Fatal);
+    CHECK(logger.log(ELogLevel::Info, "filtered"));
     CHECK_EQ(logger.lines.size(), std::size_t{1});
 }
 
 TEST(logger_base, multiline_message_stays_one_line) {
-    RecordingLogger logger{ELogLevel::DEBUG};
-    CHECK(logger.log(ELogLevel::INFO, "first\nsecond"));
+    RecordingLogger logger{ELogLevel::Debug};
+    CHECK(logger.log(ELogLevel::Info, "first\nsecond"));
 
     REQUIRE_EQ(logger.lines.size(), std::size_t{1});
     CHECK(logger.lines.front().find('\n') == std::string::npos);
@@ -109,8 +111,8 @@ TEST(logger_base, multiline_message_stays_one_line) {
 TEST(logger_base, accepts_a_view_without_a_terminator) {
     const char raw[] = {'H', 'E', 'L', 'L', 'O'};
 
-    RecordingLogger logger{ELogLevel::DEBUG};
-    CHECK(logger.log(ELogLevel::INFO, std::string_view{raw, sizeof(raw)}));
+    RecordingLogger logger{ELogLevel::Debug};
+    CHECK(logger.log(ELogLevel::Info, std::string_view{raw, sizeof(raw)}));
 
     REQUIRE_EQ(logger.lines.size(), std::size_t{1});
     const auto parsed = Logger::parseRecord(logger.lines.front());
@@ -119,10 +121,10 @@ TEST(logger_base, accepts_a_view_without_a_terminator) {
 }
 
 TEST(logger_base, serializes_concurrent_writes) {
-    constexpr int kThreads   = 4;
+    constexpr int kThreads = 4;
     constexpr int kPerThread = 250;
 
-    RecordingLogger logger{ELogLevel::DEBUG};
+    RecordingLogger logger{ELogLevel::Debug};
 
     std::vector<std::thread> workers;
     workers.reserve(kThreads);
@@ -130,7 +132,7 @@ TEST(logger_base, serializes_concurrent_writes) {
         workers.emplace_back([&logger, index] {
             const std::string message = "thread " + std::to_string(index);
             for (int i = 0; i < kPerThread; ++i) {
-                logger.log(ELogLevel::INFO, message);
+                logger.log(ELogLevel::Info, message);
             }
         });
     }

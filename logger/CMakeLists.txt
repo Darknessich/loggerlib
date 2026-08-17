@@ -1,7 +1,6 @@
 set(LOGGER_SOURCES src/LogLevel.cpp src/LogRecord.cpp src/LoggerBase.cpp
         src/FileLogger.cpp src/LoggerFactory.cpp)
 
-find_package(Threads REQUIRED)
 include(GenerateExportHeader)
 
 add_library(logger_shared SHARED ${LOGGER_SOURCES})
