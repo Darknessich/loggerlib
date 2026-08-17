@@ -1,7 +1,9 @@
 #include <logger/LogLevel.hpp>
 #include <logger/LogRecord.hpp>
+#include <logger/LoggerFactory.hpp>
 
 #include <cstdlib>
+#include <system_error>
 
 int main() {
     if (Logger::level2string(Logger::ELogLevel::INFO) != "INFO") return EXIT_FAILURE;
@@ -10,5 +12,10 @@ int main() {
     if (Logger::unescapeMessage("a\\nb") != "a\nb") return EXIT_FAILURE;
     if (Logger::formatRecord({}).empty()) return EXIT_FAILURE;
     if (Logger::parseRecord("garbage")) return EXIT_FAILURE;
+
+    std::error_code ec;
+    if (Logger::createFileLogger("", Logger::ELogLevel::INFO, ec)) return EXIT_FAILURE;
+    if (!ec) return EXIT_FAILURE;
+
     return EXIT_SUCCESS;
 }

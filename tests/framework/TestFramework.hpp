@@ -102,3 +102,6 @@ namespace tf {
 
 #define CHECK(expression) ctx_.check((expression), #expression, __FILE__, __LINE__)
 #define CHECK_EQ(left, right) ctx_.checkEqual((left), (right), #left, #right, __FILE__, __LINE__)
+
+#define REQUIRE(expression) do { if (!CHECK(expression)) return; } while (false)
+#define REQUIRE_EQ(left, right) do { if (!CHECK_EQ(left, right)) return; } while (false)

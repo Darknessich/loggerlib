@@ -1,14 +1,19 @@
 set(LOGGER_TEST_SOURCES
     test_log_level.cpp
-    test_log_record.cpp)
+    test_log_record.cpp
+    test_logger_base.cpp
+    test_file_logger.cpp)
 
 add_executable(logger_tests
     framework/TestFramework.cpp
     framework/main.cpp
+    utils/TempFile.cpp
     ${LOGGER_TEST_SOURCES})
 
-target_include_directories(logger_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(logger_tests PRIVATE Logger::Logger)
+target_include_directories(logger_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/logger/src)
+target_link_libraries(logger_tests PRIVATE logger_static)
 logger_apply_warnings(logger_tests)
 
 foreach(source IN LISTS LOGGER_TEST_SOURCES)

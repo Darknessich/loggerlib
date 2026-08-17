@@ -62,8 +62,13 @@ namespace {
 
 namespace Logger {
     std::string formatRecord(const SLogRecord& record) {
-        const auto seconds = std::chrono::floor<std::chrono::seconds>(record.time);
-        const auto millis  = std::chrono::duration_cast<std::chrono::milliseconds>(record.time - seconds).count();
+        return formatRecord(record.time, record.level, record.message);
+    }
+
+    std::string formatRecord(std::chrono::system_clock::time_point time,
+                             ELogLevel level, std::string_view message) {
+        const auto seconds = std::chrono::floor<std::chrono::seconds>(time);
+        const auto millis  = std::chrono::duration_cast<std::chrono::milliseconds>(time - seconds).count();
         const std::time_t raw = std::chrono::system_clock::to_time_t(seconds);
 
         std::tm parts{};
@@ -79,8 +84,8 @@ namespace Logger {
             std::memcpy(stamp, kUnknownStamp, sizeof(kUnknownStamp));
         }
 
-        const std::string_view name = level2string(record.level);
-        const std::string escaped = escapeMessage(record.message);
+        const std::string_view name = level2string(level);
+        const std::string escaped = escapeMessage(message);
 
         std::string out;
         out.reserve(kStampSize + name.size() + escaped.size() + 4);

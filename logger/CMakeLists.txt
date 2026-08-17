@@ -1,4 +1,5 @@
-set(LOGGER_SOURCES src/LogLevel.cpp src/LogRecord.cpp)
+set(LOGGER_SOURCES src/LogLevel.cpp src/LogRecord.cpp src/LoggerBase.cpp
+        src/FileLogger.cpp src/LoggerFactory.cpp)
 
 find_package(Threads REQUIRED)
 include(GenerateExportHeader)

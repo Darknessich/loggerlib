@@ -140,3 +140,16 @@ TEST(log_record, invalid_level_produces_unparseable_line) {
     CHECK_EQ(line, "1970-01-01 00:00:00.000 [UNKNOWN] x");
     CHECK(!Logger::parseRecord(line).has_value());
 }
+
+TEST(log_record, both_format_overloads_agree) {
+    const SLogRecord record{instant(1'000'000'000, 456), ELogLevel::WARN, "a\nb"};
+    CHECK_EQ(Logger::formatRecord(record),
+             Logger::formatRecord(record.time, record.level, record.message));
+}
+
+TEST(log_record, formats_a_view_without_a_terminator) {
+    const char raw[] = {'H', 'E', 'L', 'L', 'O'};
+    const std::string_view view{raw, sizeof(raw)};
+    CHECK_EQ(Logger::formatRecord(instant(0), ELogLevel::INFO, view),
+             "1970-01-01 00:00:00.000 [INFO] HELLO");
+}
