@@ -1,12 +1,10 @@
-# Сборка
 build/
 build-*/
 cmake-build-*/
+.cache/
 
-# Настройки IDE
 .vscode/
 .idea/
 
-# Прочее
 .DS_Store
 *.log

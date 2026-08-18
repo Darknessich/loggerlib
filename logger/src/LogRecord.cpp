@@ -1,16 +1,16 @@
 #include <logger/LogRecord.hpp>
 
-#include <array>
+#include <cerrno>
 #include <charconv>
-#include <cstdio>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 
 namespace {
-    constexpr std::size_t kStampSize = 23; // "YYYY-MM-DD HH:MM:SS.mmm"
-    constexpr char kUnknownStamp[] = "0000-00-00 00:00:00.000";
-    static_assert(sizeof(kUnknownStamp) == kStampSize + 1, "fallback stamp must be as wide as a real one");
+    constexpr char kUnknownStamp[] = "0000-00-00 00:00:00.000Z";
+    constexpr char kFormatString[] = "%04d-%02d-%02d %02d:%02d:%02d.%03dZ";
+    constexpr std::size_t kStampSize = sizeof(kUnknownStamp) - 1;
 
     bool parseInt(std::string_view text, int& out) noexcept {
         const char* const first = text.data();
@@ -19,44 +19,51 @@ namespace {
         return result.ec == std::errc{} && result.ptr == last;
     }
 
-    bool isLeapYear(int year) noexcept {
-        return year % 400 == 0 || (year % 4 == 0 && year % 100 != 0);
+    constexpr bool isDigit(char c) noexcept {
+        return '0' <= c && c <= '9';
     }
 
-    bool isCorrectDate(int year, int month, int day) noexcept {
-        static constexpr std::array<int, 12> daysInMonth{{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
-        return month >= 1 && month <= 12  && day >= 1
-            && (month == 2 && isLeapYear(year) ? day <= 29 : day <= daysInMonth[month - 1]);
-    }
+    std::optional<std::chrono::system_clock::time_point>
+    parseTimestamp(std::string_view line) noexcept {
+        if (line.size() != kStampSize) return std::nullopt;
 
-    std::optional<std::chrono::system_clock::time_point> parseTimestamp(std::string_view line) noexcept {
-        if (line.size() < kStampSize) return std::nullopt;
-
-        if (line[4] != '-' || line[7] != '-' || line[10] != ' '
-            || line[13] != ':' || line[16] != ':' || line[19] != '.') return std::nullopt;
-
-        int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0, millis = 0;
-        if (!parseInt(line.substr(0, 4),  year)   || !parseInt(line.substr(5, 2),  month) ||
-            !parseInt(line.substr(8, 2),  day)    || !parseInt(line.substr(11, 2), hour)  ||
-            !parseInt(line.substr(14, 2), minute) || !parseInt(line.substr(17, 2), second)||
-            !parseInt(line.substr(20, 3), millis)) return std::nullopt;
-
-
-        if (!isCorrectDate(year, month, day) ||
-            hour   < 0 || hour   > 23 || minute < 0 || minute > 59 ||
-            second < 0 || second > 59 || millis < 0 || millis > 999) return std::nullopt;
+        for (std::size_t i = 0; i < kStampSize; ++i) {
+            const bool ok = isDigit(kUnknownStamp[i])
+                ? isDigit(line[i])
+                : kUnknownStamp[i] == line[i];
+            if (!ok) return std::nullopt;
+        }
 
         std::tm parts{};
-        parts.tm_year = year - 1900; parts.tm_mon = month - 1; parts.tm_mday = day;
-        parts.tm_hour = hour; parts.tm_min = minute; parts.tm_sec = second;
-        parts.tm_isdst = -1;
+        int year{0}, month{0}, millis{0};
+        if (!parseInt(line.substr(0, 4),  year) ||
+            !parseInt(line.substr(5, 2),  month) ||
+            !parseInt(line.substr(8, 2),  parts.tm_mday) ||
+            !parseInt(line.substr(11, 2), parts.tm_hour) ||
+            !parseInt(line.substr(14, 2), parts.tm_min) ||
+            !parseInt(line.substr(17, 2), parts.tm_sec) ||
+            !parseInt(line.substr(20, 3), millis)) return std::nullopt;
 
-        const std::time_t raw = std::mktime(&parts);
-        return raw == static_cast<std::time_t>(-1)
-               ? std::nullopt
-               : std::optional{
-                    std::chrono::system_clock::from_time_t(raw)
-                    + std::chrono::milliseconds{millis}};
+        parts.tm_year = year - 1900;
+        parts.tm_mon = month - 1;
+
+        errno = 0;
+        const auto requested = parts;
+        const std::time_t raw = ::timegm(&parts);
+        if (raw == static_cast<std::time_t>(-1) && errno != 0)
+            return std::nullopt;
+
+        if (parts.tm_year != requested.tm_year ||
+            parts.tm_mon != requested.tm_mon ||
+            parts.tm_mday != requested.tm_mday ||
+            parts.tm_hour != requested.tm_hour ||
+            parts.tm_min != requested.tm_min ||
+            parts.tm_sec != requested.tm_sec) return std::nullopt;
+
+        return std::optional{
+            std::chrono::system_clock::from_time_t(raw)
+            + std::chrono::milliseconds{millis}
+        };
     }
 } // namespace
 
@@ -74,10 +81,11 @@ namespace Logger {
         std::tm parts{};
         char stamp[kStampSize + 1] = {};
 
-        const int written = ::localtime_r(&raw, &parts) != nullptr
-            ? std::snprintf(stamp, sizeof(stamp), "%04d-%02d-%02d %02d:%02d:%02d.%03d",
-                            parts.tm_year + 1900, parts.tm_mon + 1, parts.tm_mday,
-                            parts.tm_hour, parts.tm_min, parts.tm_sec, static_cast<int>(millis))
+        const int written = ::gmtime_r(&raw, &parts) != nullptr
+            ? std::snprintf(
+                stamp, sizeof(stamp), kFormatString,
+                parts.tm_year + 1900, parts.tm_mon + 1, parts.tm_mday,
+                parts.tm_hour, parts.tm_min, parts.tm_sec, static_cast<int>(millis))
             : -1;
 
         if (written != static_cast<int>(kStampSize)) {
@@ -94,8 +102,8 @@ namespace Logger {
     }
 
     std::optional<SLogRecord> parseRecord(std::string_view line) {
-        if (line.size() < kStampSize + 4) return std::nullopt;
-        const auto time = parseTimestamp(line);
+        if (line.size() < kStampSize) return std::nullopt;
+        const auto time = parseTimestamp(line.substr(0, kStampSize));
         if (!time) return std::nullopt;
 
         const std::string_view rest = line.substr(kStampSize);

@@ -13,12 +13,6 @@ using Logger::ELogLevel;
 using Logger::SLogRecord;
 
 namespace {
-    [[maybe_unused]] const bool kTimeZoneFixed = [] {
-        ::setenv("TZ", "UTC", 1);
-        ::tzset();
-        return true;
-    }();
-
     std::chrono::system_clock::time_point instant(std::time_t seconds, int millis = 0) {
         return std::chrono::system_clock::from_time_t(seconds) + std::chrono::milliseconds{millis};
     }
@@ -26,25 +20,24 @@ namespace {
     long long millisSinceEpoch(std::chrono::system_clock::time_point time) {
         return std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch()).count();
     }
-
 } // namespace
 
 TEST(log_record, formats_known_instants) {
     CHECK_EQ(
         Logger::formatRecord({instant(0, 123), ELogLevel::Info, "hello"}),
-        "1970-01-01 00:00:00.123 [INFO] hello"
+        "1970-01-01 00:00:00.123Z [INFO] hello"
     );
 
     CHECK_EQ(
         Logger::formatRecord({instant(1'000'000'000), ELogLevel::Fatal, "boom"}),
-        "2001-09-09 01:46:40.000 [FATAL] boom"
+        "2001-09-09 01:46:40.000Z [FATAL] boom"
     );
 }
 
 TEST(log_record, formats_empty_message) {
     CHECK_EQ(
         Logger::formatRecord({instant(0), ELogLevel::Warn, ""}),
-        "1970-01-01 00:00:00.000 [WARN] "
+        "1970-01-01 00:00:00.000Z [WARN] "
     );
 }
 
@@ -102,51 +95,52 @@ TEST(log_record, unescaping_tolerates_malformed_input) {
 TEST(log_record, rejects_short_and_truncated_lines) {
     CHECK(!Logger::parseRecord("").has_value());
     CHECK(!Logger::parseRecord("x").has_value());
-    CHECK(!Logger::parseRecord(std::string(22, 'x')).has_value());
     CHECK(!Logger::parseRecord(std::string(23, 'x')).has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000 [INFO]").has_value());
+    CHECK(!Logger::parseRecord(std::string(24, 'x')).has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000Z").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000Z [INFO]").has_value());
 }
 
 TEST(log_record, rejects_malformed_structure) {
-    CHECK(!Logger::parseRecord("1970-01-01T00:00:00.000 [INFO] text").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00,000 [INFO] text").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000 INFO text").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000 [INFO]text").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000 [NOPE] text").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000 [] text").has_value());
-    CHECK(!Logger::parseRecord("19x0-01-01 00:00:00.000 [INFO] text").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.00a [INFO] text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01T00:00:00.000Z [INFO] text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00,000Z [INFO] text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000Z INFO text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000Z [INFO]text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000Z [NOPE] text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000Z [] text").has_value());
+    CHECK(!Logger::parseRecord("19x0-01-01 00:00:00.000Z [INFO] text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.00aZ [INFO] text").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:00:00.000Y [INFO] text").has_value());
 }
 
 TEST(log_record, rejects_impossible_dates) {
-    CHECK(!Logger::parseRecord("1970-13-01 00:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1970-00-01 00:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1970-01-00 00:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1970-01-32 00:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1970-04-31 00:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 24:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 00:60:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1970-01-01 23:59:60.000 [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-13-01 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-00-01 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-01-00 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-01-32 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-04-31 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 24:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 00:60:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1970-01-01 23:59:60.000Z [INFO] x").has_value());
 }
 
 TEST(log_record, handles_leap_years) {
-    CHECK(Logger::parseRecord("2024-02-29 00:00:00.000 [INFO] x").has_value());
-    CHECK(Logger::parseRecord("2000-02-29 00:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("2023-02-29 00:00:00.000 [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1900-02-29 00:00:00.000 [INFO] x").has_value());
+    CHECK(Logger::parseRecord("2024-02-29 00:00:00.000Z [INFO] x").has_value());
+    CHECK(Logger::parseRecord("2000-02-29 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("2023-02-29 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1900-02-29 00:00:00.000Z [INFO] x").has_value());
 }
 
 TEST(log_record, accepts_boundary_values) {
-    CHECK(Logger::parseRecord("1970-01-01 23:59:59.999 [INFO] x").has_value());
-    CHECK(Logger::parseRecord("1970-01-31 00:00:00.000 [INFO] x").has_value());
-    CHECK(Logger::parseRecord("1970-12-31 00:00:00.000 [INFO] x").has_value());
-    CHECK(Logger::parseRecord("1970-01-01 00:00:00.999 [INFO] x").has_value());
+    CHECK(Logger::parseRecord("1970-01-01 23:59:59.999Z [INFO] x").has_value());
+    CHECK(Logger::parseRecord("1970-01-31 00:00:00.000Z [INFO] x").has_value());
+    CHECK(Logger::parseRecord("1970-12-31 00:00:00.000Z [INFO] x").has_value());
+    CHECK(Logger::parseRecord("1970-01-01 00:00:00.999Z [INFO] x").has_value());
 }
 
 TEST(log_record, invalid_level_produces_unparseable_line) {
     const auto line = Logger::formatRecord({instant(0), static_cast<ELogLevel>(42), "x"});
-    CHECK_EQ(line, "1970-01-01 00:00:00.000 [UNKNOWN] x");
+    CHECK_EQ(line, "1970-01-01 00:00:00.000Z [UNKNOWN] x");
     CHECK(!Logger::parseRecord(line).has_value());
 }
 
@@ -163,6 +157,22 @@ TEST(log_record, formats_a_view_without_a_terminator) {
     const std::string_view view{raw, sizeof(raw)};
     CHECK_EQ(
         Logger::formatRecord(instant(0), ELogLevel::Info, view),
-        "1970-01-01 00:00:00.000 [INFO] HELLO"
+        "1970-01-01 00:00:00.000Z [INFO] HELLO"
     );
+}
+
+TEST(log_record, output_does_not_depend_on_the_local_time_zone) {
+    const auto formatUnder = [](const char* zone) {
+        ::setenv("TZ", zone, 1);
+        ::tzset();
+        return Logger::formatRecord({instant(0, 123), ELogLevel::Info, "hello"});
+    };
+
+    const auto moscow  = formatUnder("Europe/Moscow");
+    const auto chatham = formatUnder("Pacific/Chatham");
+    ::unsetenv("TZ");
+    ::tzset();
+
+    CHECK_EQ(moscow, "1970-01-01 00:00:00.123Z [INFO] hello");
+    CHECK_EQ(chatham, moscow);
 }

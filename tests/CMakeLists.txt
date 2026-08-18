@@ -18,7 +18,6 @@ function(logger_add_tests target library)
         set_tests_properties(${suite} PROPERTIES
             TIMEOUT           30
             LABELS            unit
-            ENVIRONMENT       "TZ=UTC"
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
 endfunction()
