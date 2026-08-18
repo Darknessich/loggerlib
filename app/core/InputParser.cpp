@@ -14,9 +14,8 @@ namespace App {
 
         std::pair<std::string_view, std::string_view> splitFirstWord(std::string_view line) {
             const auto end = line.find_first_of(kSpaces);
-            return end == std::string_view::npos
-                ? std::pair{line, std::string_view{}}
-                : std::pair{line.substr(0, end), line.substr(end)};
+            return end == std::string_view::npos ? std::pair{line, std::string_view{}}
+                                                 : std::pair{line.substr(0, end), line.substr(end)};
         }
 
         SUserInput parseCommand(std::string_view line, Logger::ELogLevel defaultLevel) {
@@ -26,7 +25,9 @@ namespace App {
             if (name == "/help") return {EInputKind::Help, defaultLevel, {}, {}};
             if (name != "/level")
                 return {
-                    EInputKind::Error, defaultLevel, {},
+                    EInputKind::Error,
+                    defaultLevel,
+                    {},
                     "unknown command: " + std::string{name} + " (type /help)"
                 };
 
@@ -37,8 +38,7 @@ namespace App {
             const auto level = Logger::string2level(argument);
             if (!level)
                 return {
-                    EInputKind::Error, defaultLevel, {},
-                    "unknown level: " + std::string{argument}
+                    EInputKind::Error, defaultLevel, {}, "unknown level: " + std::string{argument}
                 };
 
             return {EInputKind::SetLevel, *level, {}, {}};
@@ -51,8 +51,8 @@ namespace App {
 
         if (line.front() == '/')
             return line.size() > 1 && line[1] == '/'
-                ? SUserInput{EInputKind::Message, defaultLevel, std::string{line.substr(1)}, {}}
-                : parseCommand(line, defaultLevel);
+                       ? SUserInput{EInputKind::Message, defaultLevel, std::string{line.substr(1)}, {}}
+                       : parseCommand(line, defaultLevel);
 
         const auto [word, tail] = splitFirstWord(line);
         const auto level = Logger::string2level(word);
@@ -60,7 +60,7 @@ namespace App {
 
         const std::string_view message = trim(tail);
         return message.empty()
-            ? SUserInput{EInputKind::Error, defaultLevel, {}, "message text is missing"}
-            : SUserInput{EInputKind::Message, *level, std::string{message}, {}};
+                   ? SUserInput{EInputKind::Error, defaultLevel, {}, "message text is missing"}
+                   : SUserInput{EInputKind::Message, *level, std::string{message}, {}};
     }
 } // namespace App

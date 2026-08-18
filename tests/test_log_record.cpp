@@ -4,6 +4,7 @@
 #include <logger/LogRecord.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <initializer_list>
@@ -17,8 +18,9 @@ namespace {
         return std::chrono::system_clock::from_time_t(seconds) + std::chrono::milliseconds{millis};
     }
 
-    long long millisSinceEpoch(std::chrono::system_clock::time_point time) {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch()).count();
+    std::int64_t millisSinceEpoch(std::chrono::system_clock::time_point time) {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch())
+            .count();
     }
 } // namespace
 
@@ -36,16 +38,22 @@ TEST(log_record, formats_known_instants) {
 
 TEST(log_record, formats_empty_message) {
     CHECK_EQ(
-        Logger::formatRecord({instant(0), ELogLevel::Warn, ""}),
-        "1970-01-01 00:00:00.000Z [WARN] "
+        Logger::formatRecord({instant(0), ELogLevel::Warn, ""}), "1970-01-01 00:00:00.000Z [WARN] "
     );
 }
 
 TEST(log_record, round_trips_through_format_and_parse) {
-    for (const std::string message : {
-        "", "simple", "with  spaces", "юникод", "a\nb", "a\rb",
-        "back\\slash", "]", "[INFO] fake", "trailing backslash \\"
-    }) {
+    for (const std::string message :
+         {"",
+          "simple",
+          "with  spaces",
+          "юникод",
+          "a\nb",
+          "a\rb",
+          "back\\slash",
+          "]",
+          "[INFO] fake",
+          "trailing backslash \\"}) {
         const SLogRecord original{instant(1'000'000'000, 456), ELogLevel::Warn, message};
 
         const auto parsed = Logger::parseRecord(Logger::formatRecord(original));
@@ -77,19 +85,17 @@ TEST(log_record, escaping_is_reversible) {
 
     CHECK(Logger::escapeMessage("a\nb") != Logger::escapeMessage("a\\nb"));
 
-    for (const std::string text : {
-        "", "plain", "a\nb", "a\rb", "a\\b", "\\", "\\\\",
-        "\\n", "смешанный \\ текст\n"
-    }) {
+    for (const std::string text :
+         {"", "plain", "a\nb", "a\rb", "a\\b", "\\", "\\\\", "\\n", "смешанный \\ текст\n"}) {
         CHECK_EQ(Logger::unescapeMessage(Logger::escapeMessage(text)), text);
     }
 }
 
 TEST(log_record, unescaping_tolerates_malformed_input) {
     CHECK_EQ(Logger::unescapeMessage("a\\qb"), "a\\qb");
-    CHECK_EQ(Logger::unescapeMessage("a\\"),   "a\\");
-    CHECK_EQ(Logger::unescapeMessage("\\"),    "\\");
-    CHECK_EQ(Logger::unescapeMessage(""),      "");
+    CHECK_EQ(Logger::unescapeMessage("a\\"), "a\\");
+    CHECK_EQ(Logger::unescapeMessage("\\"), "\\");
+    CHECK_EQ(Logger::unescapeMessage(""), "");
 }
 
 TEST(log_record, rejects_short_and_truncated_lines) {
@@ -168,7 +174,7 @@ TEST(log_record, output_does_not_depend_on_the_local_time_zone) {
         return Logger::formatRecord({instant(0, 123), ELogLevel::Info, "hello"});
     };
 
-    const auto moscow  = formatUnder("Europe/Moscow");
+    const auto moscow = formatUnder("Europe/Moscow");
     const auto chatham = formatUnder("Pacific/Chatham");
     ::unsetenv("TZ");
     ::tzset();

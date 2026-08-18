@@ -27,10 +27,14 @@ namespace App {
         }
     } // namespace
 
-    ConsoleApp::ConsoleApp(Logger::ILogger& logger, std::istream& in,
-                            std::ostream& out, std::ostream& err, bool showPrompt)
-        : m_logger{logger}, m_in{in}, m_out{out}, m_err{err}, m_showPrompt{showPrompt}
-    {}
+    ConsoleApp::ConsoleApp(
+        Logger::ILogger& logger,
+        std::istream& in,
+        std::ostream& out,
+        std::ostream& err,
+        bool showPrompt
+    )
+        : m_logger{logger}, m_in{in}, m_out{out}, m_err{err}, m_showPrompt{showPrompt} {}
 
     EExitCode ConsoleApp::run() {
         MessageQueue queue;
@@ -38,7 +42,7 @@ namespace App {
         worker.start();
 
         bool running = true;
-        bool warned  = false;
+        bool warned = false;
         std::string line;
 
         while (running) {
@@ -49,7 +53,7 @@ namespace App {
             switch (input.kind) {
                 case EInputKind::Message:
                     if (m_logger.isEnabled(input.level))
-                        queue.push({input.level, std::move(input.message)});
+                        running = queue.push({input.level, std::move(input.message)});
                     break;
                 case EInputKind::SetLevel:
                     m_logger.setLevel(input.level);

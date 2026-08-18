@@ -17,12 +17,14 @@ namespace App {
     class MessageQueue {
     public:
         MessageQueue() = default;
+        ~MessageQueue() = default;
+
         MessageQueue(const MessageQueue&) = delete;
         MessageQueue& operator=(const MessageQueue&) = delete;
         MessageQueue(MessageQueue&&) = delete;
         MessageQueue& operator=(MessageQueue&&) = delete;
 
-        bool push(SMessage msg);
+        [[nodiscard]] bool push(SMessage msg);
         bool pop(SMessage& out);
         void close() noexcept;
         bool isClosed() const noexcept;

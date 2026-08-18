@@ -93,7 +93,7 @@ TEST(log_worker, a_worker_that_never_started_can_be_destroyed) {
     MessageQueue queue;
 
     {
-        LogWorker worker{logger, queue};
+        const LogWorker worker{logger, queue};
         CHECK_EQ(worker.processed(), std::size_t{0});
     }
 

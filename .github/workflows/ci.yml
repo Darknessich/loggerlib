@@ -27,6 +27,34 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+      - name: Check formatting
+        run: clang-format --dry-run --Werror $(git ls-files '*.cpp' '*.hpp')
+
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-tidy
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-tidy
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Generate export header
+        run: cmake --build build --target logger_shared -j
+      - name: Run clang-tidy
+        run: >
+          run-clang-tidy -p build -quiet -warnings-as-errors='*'
+          $(git ls-files '*.cpp')
+
   sanitizers:
     name: sanitizer=${{ matrix.sanitizer }}
     runs-on: ubuntu-latest

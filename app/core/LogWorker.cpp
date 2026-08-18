@@ -2,8 +2,7 @@
 
 namespace App {
     LogWorker::LogWorker(Logger::ILogger& logger, MessageQueue& queue) noexcept
-        : m_logger{logger}, m_queue{queue}
-    {}
+        : m_logger{logger}, m_queue{queue} {}
 
     LogWorker::~LogWorker() {
         stop();
@@ -30,9 +29,11 @@ namespace App {
     void LogWorker::loop() {
         SMessage message;
         while (m_queue.pop(message)) {
-            if (m_logger.log(message.level, message.message))
+            if (m_logger.log(message.level, message.message)) {
                 m_processed.fetch_add(1, std::memory_order_relaxed);
-            else m_failed.fetch_add(1, std::memory_order_relaxed);
+            } else {
+                m_failed.fetch_add(1, std::memory_order_relaxed);
+            }
         }
     }
 } // namespace App

@@ -21,8 +21,8 @@ namespace App {
 
         void start();
         void stop();
-        std::size_t processed() const noexcept;
-        std::size_t failed() const noexcept;
+        [[nodiscard]] std::size_t processed() const noexcept;
+        [[nodiscard]] std::size_t failed() const noexcept;
 
     private:
         void loop();

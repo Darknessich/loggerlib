@@ -11,18 +11,19 @@ namespace Logger {
         };
 
         inline constexpr std::size_t kLevelCount = static_cast<std::size_t>(ELogLevel::Count);
-        inline constexpr std::array<SLevelName, kLevelCount> kLevelNames{{
-            {ELogLevel::Debug, "DEBUG"},
-            {ELogLevel::Info, "INFO"},
-            {ELogLevel::Warn, "WARN"},
-            {ELogLevel::Error, "ERROR"},
-            {ELogLevel::Fatal, "FATAL"}
-        }};
+        inline constexpr std::array<SLevelName, kLevelCount> kLevelNames{
+            {{ELogLevel::Debug, "DEBUG"},
+             {ELogLevel::Info, "INFO"},
+             {ELogLevel::Warn, "WARN"},
+             {ELogLevel::Error, "ERROR"},
+             {ELogLevel::Fatal, "FATAL"}}
+        };
 
         constexpr bool isTableOrdered() noexcept {
             for (std::size_t i = 0; i < kLevelCount; ++i) {
-                if (static_cast<std::size_t>(kLevelNames[i].level) != i)
+                if (static_cast<std::size_t>(kLevelNames[i].level) != i) {
                     return false;
+                }
             }
             return true;
         }
@@ -47,15 +48,14 @@ namespace Logger {
 
     std::string_view level2string(ELogLevel level) noexcept {
         const std::size_t index = static_cast<std::size_t>(level);
-        return index < kLevelNames.size()
-            ? kLevelNames[index].name
-            : std::string_view{"UNKNOWN"};
+        return index < kLevelNames.size() ? kLevelNames[index].name : std::string_view{"UNKNOWN"};
     }
 
     std::optional<ELogLevel> string2level(std::string_view str) noexcept {
         for (const auto& entry : kLevelNames) {
-            if (equalsIgnoreCase(entry.name, str))
+            if (equalsIgnoreCase(entry.name, str)) {
                 return entry.level;
+            }
         }
         return std::nullopt;
     }

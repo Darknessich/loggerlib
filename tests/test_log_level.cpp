@@ -14,8 +14,8 @@ namespace {
 
 TEST(log_level, names_match_the_enumeration) {
     CHECK_EQ(Logger::level2string(ELogLevel::Debug), "DEBUG");
-    CHECK_EQ(Logger::level2string(ELogLevel::Info),  "INFO");
-    CHECK_EQ(Logger::level2string(ELogLevel::Warn),  "WARN");
+    CHECK_EQ(Logger::level2string(ELogLevel::Info), "INFO");
+    CHECK_EQ(Logger::level2string(ELogLevel::Warn), "WARN");
     CHECK_EQ(Logger::level2string(ELogLevel::Error), "ERROR");
     CHECK_EQ(Logger::level2string(ELogLevel::Fatal), "FATAL");
 }
@@ -38,7 +38,7 @@ TEST(log_level, sentinel_and_out_of_range_are_unknown) {
 
 TEST(log_level, name_round_trips_back_to_the_same_level) {
     for (std::size_t index = 0; index < kLevelCount; ++index) {
-        const auto level  = static_cast<ELogLevel>(index);
+        const auto level = static_cast<ELogLevel>(index);
         const auto parsed = Logger::string2level(Logger::level2string(level));
 
         if (!CHECK(parsed.has_value())) continue;
@@ -77,8 +77,8 @@ TEST(log_level, non_ascii_input_is_rejected) {
 
 TEST(log_level, order_matches_severity) {
     CHECK(ELogLevel::Debug < ELogLevel::Info);
-    CHECK(ELogLevel::Info  < ELogLevel::Warn);
-    CHECK(ELogLevel::Warn  < ELogLevel::Error);
+    CHECK(ELogLevel::Info < ELogLevel::Warn);
+    CHECK(ELogLevel::Warn < ELogLevel::Error);
     CHECK(ELogLevel::Error < ELogLevel::Fatal);
     CHECK(ELogLevel::Fatal < ELogLevel::Count);
 }

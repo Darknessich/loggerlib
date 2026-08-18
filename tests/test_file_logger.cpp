@@ -12,8 +12,8 @@
 #include <thread>
 #include <vector>
 
-using utils::TempFile;
 using Logger::ELogLevel;
+using utils::TempFile;
 
 TEST(file_logger, creates_the_file_and_writes_a_record) {
     const TempFile file{"file_logger_creates.log"};
@@ -123,7 +123,7 @@ TEST(file_logger, serializes_concurrent_writes) {
         workers.emplace_back([&logger, index] {
             const std::string message = "thread " + std::to_string(index);
             for (int i = 0; i < kPerThread; ++i) {
-                logger->log(ELogLevel::Info, message);
+                (void)logger->log(ELogLevel::Info, message);
             }
         });
     }

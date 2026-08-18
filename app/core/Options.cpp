@@ -58,13 +58,17 @@ namespace App {
     }
 
     void printUsage(const char* program, std::ostream& stream) {
-        stream << "Usage: " << program << " <logfile> [level]\n"
-                  "       " << program << " --help\n"
+        stream << "Usage: " << program
+               << " <logfile> [level]\n"
+                  "       "
+               << program
+               << " --help\n"
                   "\n"
                   "  <logfile>  file the log is appended to\n"
                   "  [level]    lowest level that reaches the log, one of ";
         printLevels(stream);
-        stream << " (default: " << Logger::level2string(SOptions{}.level) << ")\n"
+        stream << " (default: " << Logger::level2string(SOptions{}.level)
+               << ")\n"
                   "\n"
                   "Type /help inside the application for the list of commands.\n";
     }

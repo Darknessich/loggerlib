@@ -10,7 +10,5 @@
 
 namespace Logger {
     LOGGER_EXPORT std::unique_ptr<ILogger>
-    createFileLogger(const std::string& path,
-                     ELogLevel level,
-                     std::error_code& ec);
+    createFileLogger(const std::string& path, ELogLevel level, std::error_code& ec);
 } // namespace Logger

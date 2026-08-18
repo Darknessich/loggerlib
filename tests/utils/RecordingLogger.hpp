@@ -23,7 +23,7 @@ namespace utils {
         bool log(Logger::ELogLevel level, std::string_view message) override {
             if (!isEnabled(level)) return true;
 
-            std::lock_guard lock(m_mutex);
+            const std::lock_guard lock(m_mutex);
             m_records.push_back({level, std::string{message}});
             return m_succeeds.load(std::memory_order_relaxed);
         }
@@ -36,17 +36,15 @@ namespace utils {
             return m_level.load(std::memory_order_relaxed);
         }
 
-        void failWrites() noexcept {
-            m_succeeds.store(false, std::memory_order_relaxed);
-        }
+        void failWrites() noexcept { m_succeeds.store(false, std::memory_order_relaxed); }
 
         std::vector<SRecord> records() const {
-            std::lock_guard lock(m_mutex);
+            const std::lock_guard lock(m_mutex);
             return m_records;
         }
 
         std::size_t count() const {
-            std::lock_guard lock(m_mutex);
+            const std::lock_guard lock(m_mutex);
             return m_records.size();
         }
 

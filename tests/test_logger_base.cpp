@@ -31,7 +31,7 @@ namespace {
             return writeResult;
         }
 
-        std::chrono::system_clock::time_point now() const noexcept override {
+        [[nodiscard]] std::chrono::system_clock::time_point now() const noexcept override {
             return fixedTime();
         }
     };
@@ -132,7 +132,7 @@ TEST(logger_base, serializes_concurrent_writes) {
         workers.emplace_back([&logger, index] {
             const std::string message = "thread " + std::to_string(index);
             for (int i = 0; i < kPerThread; ++i) {
-                logger.log(ELogLevel::Info, message);
+                (void)logger.log(ELogLevel::Info, message);
             }
         });
     }

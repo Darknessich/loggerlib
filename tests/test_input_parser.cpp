@@ -56,7 +56,7 @@ TEST(input_parser, surrounding_spaces_are_trimmed) {
 }
 
 TEST(input_parser, blank_lines_are_empty) {
-    for (const auto line : {"", "   ", "\t"}) {
+    for (const auto* const line : {"", "   ", "\t"}) {
         const auto input = parseUserInput(line, ELogLevel::Info);
         REQUIRE_EQ(input.kind, EInputKind::Empty);
     }

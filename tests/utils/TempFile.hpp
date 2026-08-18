@@ -14,9 +14,9 @@ namespace utils {
         TempFile(TempFile&&) = delete;
         TempFile& operator=(TempFile&&) = delete;
 
-        const std::string& path() const noexcept { return m_path; }
-        bool exists() const;
-        std::vector<std::string> readLines() const;
+        [[nodiscard]] const std::string& path() const noexcept { return m_path; }
+        [[nodiscard]] bool exists() const;
+        [[nodiscard]] std::vector<std::string> readLines() const;
 
     private:
         std::string m_path;

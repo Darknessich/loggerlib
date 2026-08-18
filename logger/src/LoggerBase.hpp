@@ -11,16 +11,16 @@
 namespace Logger {
     class LoggerBase : public ILogger {
     public:
-        bool log(ELogLevel level, std::string_view message) final;
+        [[nodiscard]] bool log(ELogLevel level, std::string_view message) final;
         void setLevel(ELogLevel level) noexcept final;
-        ELogLevel level() const noexcept final;
+        [[nodiscard]] ELogLevel level() const noexcept final;
 
     protected:
         explicit LoggerBase(ELogLevel level) noexcept;
 
-        virtual bool writeLine(std::string_view line) = 0;
+        [[nodiscard]] virtual bool writeLine(std::string_view line) = 0;
 
-        virtual std::chrono::system_clock::time_point now() const noexcept;
+        [[nodiscard]] virtual std::chrono::system_clock::time_point now() const noexcept;
 
     private:
         std::atomic<ELogLevel> m_level;

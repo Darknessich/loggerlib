@@ -32,8 +32,7 @@ int main(int argc, char** argv) {
     }
 
     App::ConsoleApp application{
-        *logger, std::cin, std::cout,
-        std::cerr, ::isatty(STDIN_FILENO) != 0
+        *logger, std::cin, std::cout, std::cerr, ::isatty(STDIN_FILENO) != 0
     };
     return static_cast<int>(application.run());
 }

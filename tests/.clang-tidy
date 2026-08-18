@@ -1,0 +1,17 @@
+InheritParentConfig: true
+
+Checks: >
+  -bugprone-exception-escape,
+  -bugprone-throwing-static-initialization,
+  -cert-err58-cpp,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-macro-usage,
+  -google-readability-avoid-underscore-in-googletest-name,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+  -readability-function-cognitive-complexity,
+  -bugprone-unchecked-optional-access
+
+CheckOptions:
+  readability-identifier-naming.NamespaceCase: aNy_CasE

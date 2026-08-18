@@ -75,7 +75,7 @@ TEST(options, rejects_an_unknown_option) {
 }
 
 TEST(options, reports_a_help_request) {
-    for (const auto flag : {"--help", "-h"}) {
+    for (const auto* const flag : {"--help", "-h"}) {
         const auto parsed = parse({"logger_app", flag});
 
         REQUIRE_EQ(parsed.kind, EOptionsKind::Help);

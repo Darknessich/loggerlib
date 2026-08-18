@@ -5,17 +5,19 @@
 #include <iosfwd>
 
 namespace App {
-    enum class EExitCode {
-        Success        = 0,
-        Usage          = 1,
-        LogUnavailable = 2,
-        WriteFailed    = 3
-    };
+    enum class EExitCode { Success = 0, Usage = 1, LogUnavailable = 2, WriteFailed = 3 };
 
     class ConsoleApp {
     public:
-        ConsoleApp(Logger::ILogger& logger, std::istream& in,
-                    std::ostream& out, std::ostream& err, bool showPrompt);
+        ConsoleApp(
+            Logger::ILogger& logger,
+            std::istream& in,
+            std::ostream& out,
+            std::ostream& err,
+            bool showPrompt
+        );
+
+        ~ConsoleApp() = default;
 
         ConsoleApp(const ConsoleApp&) = delete;
         ConsoleApp& operator=(const ConsoleApp&) = delete;

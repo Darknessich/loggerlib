@@ -12,7 +12,8 @@ namespace tf {
 
         bool matches(const STestCase& testCase, const SOptions& options, const std::string& name) {
             if (!options.suite.empty() && options.suite != testCase.suite) return false;
-            if (!options.filter.empty() && name.find(options.filter) == std::string::npos) return false;
+            if (!options.filter.empty() && name.find(options.filter) == std::string::npos)
+                return false;
             return true;
         }
     } // namespace
@@ -37,7 +38,8 @@ namespace tf {
     }
 
     void printUsage(const char* program, std::ostream& stream) {
-        stream << "Usage: " << program << " [--help|-h] [--suite <name>] [--filter <substring>] [--list]\n";
+        stream << "Usage: " << program
+               << " [--help|-h] [--suite <name>] [--filter <substring>] [--list]\n";
     }
 
     bool parseOptions(int argc, char** argv, SOptions& out) {
@@ -64,7 +66,7 @@ namespace tf {
 
     int run(const SOptions& options) {
         std::size_t executed = 0;
-        std::size_t failed   = 0;
+        std::size_t failed = 0;
 
         for (const auto& testCase : Registry::instance().cases()) {
             const std::string name = fullName(testCase);
@@ -82,7 +84,9 @@ namespace tf {
             try {
                 testCase.function(context);
             } catch (const std::exception& error) {
-                context.reportFailure(std::string{"unexpected exception: "} + error.what(), __FILE__, __LINE__);
+                context.reportFailure(
+                    std::string{"unexpected exception: "} + error.what(), __FILE__, __LINE__
+                );
             } catch (...) {
                 context.reportFailure("unexpected non-standard exception", __FILE__, __LINE__);
             }
@@ -92,7 +96,8 @@ namespace tf {
                 std::cout << "[  OK  ] " << name << '\n';
             } else {
                 ++failed;
-                std::cout << "[ FAIL ] " << name << " (" << context.failureCount() << " failed checks)\n";
+                std::cout << "[ FAIL ] " << name << " (" << context.failureCount()
+                          << " failed checks)\n";
             }
         }
 
@@ -103,8 +108,9 @@ namespace tf {
 
         if (options.listOnly) return EXIT_SUCCESS;
 
-        std::cout << '\n' << (executed - failed) << " passed, " << failed << " failed, "
-                << executed << " total\n";
+        std::cout << '\n'
+                  << (executed - failed) << " passed, " << failed << " failed, " << executed
+                  << " total\n";
         return failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 } // namespace tf

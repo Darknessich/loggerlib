@@ -30,7 +30,7 @@ namespace utils {
         std::vector<std::string> lines;
 
         std::ifstream input{m_path};
-        for (std::string line; std::getline(input, line); ) {
+        for (std::string line; std::getline(input, line);) {
             lines.push_back(std::move(line));
         }
         return lines;

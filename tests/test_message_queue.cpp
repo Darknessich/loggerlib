@@ -41,7 +41,7 @@ TEST(message_queue, pop_waits_for_a_push) {
     });
 
     CHECK(!popped.load());
-    queue.push({ELogLevel::Info, "wake up"});
+    CHECK(queue.push({ELogLevel::Info, "wake up"}));
     consumer.join();
 
     REQUIRE(popped.load());
@@ -98,7 +98,8 @@ TEST(message_queue, keeps_the_order_of_every_producer) {
 
     std::thread consumer([&] {
         SMessage message;
-        while (queue.pop(message)) received.push_back(std::move(message));
+        while (queue.pop(message))
+            received.push_back(std::move(message));
     });
 
     std::vector<std::thread> producers;
@@ -106,14 +107,13 @@ TEST(message_queue, keeps_the_order_of_every_producer) {
     for (int id = 0; id < kProducers; ++id) {
         producers.emplace_back([&queue, id] {
             for (int index = 0; index < kPerProducer; ++index) {
-                queue.push({
-                    ELogLevel::Info,
-                    std::to_string(id) + ':' + std::to_string(index)
-                });
+                std::string text = std::to_string(id) + ':' + std::to_string(index);
+                (void)queue.push({ELogLevel::Info, std::move(text)});
             }
         });
     }
-    for (auto& producer : producers) producer.join();
+    for (auto& producer : producers)
+        producer.join();
 
     queue.close();
     consumer.join();

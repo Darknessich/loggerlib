@@ -6,14 +6,12 @@
 #include <string>
 
 namespace Logger {
-    LoggerBase::LoggerBase(ELogLevel level) noexcept
-        : m_level{level}
-    {}
+    LoggerBase::LoggerBase(ELogLevel level) noexcept : m_level{level} {}
 
     bool LoggerBase::log(ELogLevel level, std::string_view message) {
         if (!isEnabled(level)) return true;
         const std::string line = formatRecord(now(), level, message);
-        std::lock_guard lock(m_mutex);
+        const std::lock_guard lock(m_mutex);
         return writeLine(line);
     }
 

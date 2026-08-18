@@ -9,9 +9,7 @@
 
 namespace Logger {
     std::unique_ptr<ILogger>
-    createFileLogger(const std::string& path,
-                     ELogLevel level,
-                     std::error_code& ec) {
+    createFileLogger(const std::string& path, ELogLevel level, std::error_code& ec) {
         ec.clear();
 
         if (static_cast<std::size_t>(level) >= static_cast<std::size_t>(ELogLevel::Count)) {

@@ -4,8 +4,7 @@
 
 namespace Logger {
     FileLogger::FileLogger(std::ofstream&& stream, ELogLevel level)
-        : LoggerBase(level), m_fstream{std::move(stream)}
-    {}
+        : LoggerBase(level), m_fstream{std::move(stream)} {}
 
     bool FileLogger::writeLine(std::string_view line) {
         m_fstream << line << '\n' << std::flush;
