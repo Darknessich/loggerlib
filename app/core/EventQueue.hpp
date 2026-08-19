@@ -9,23 +9,26 @@
 #include <string>
 
 namespace App {
-    struct SMessage {
+    enum class EEventKind { Write, SetLevel };
+
+    struct SEvent {
+        EEventKind kind{EEventKind::Write};
         Logger::ELogLevel level{Logger::ELogLevel::Info};
         std::string message;
     };
 
-    class MessageQueue {
+    class EventQueue {
     public:
-        MessageQueue() = default;
-        ~MessageQueue() = default;
+        EventQueue() = default;
+        ~EventQueue() = default;
 
-        MessageQueue(const MessageQueue&) = delete;
-        MessageQueue& operator=(const MessageQueue&) = delete;
-        MessageQueue(MessageQueue&&) = delete;
-        MessageQueue& operator=(MessageQueue&&) = delete;
+        EventQueue(const EventQueue&) = delete;
+        EventQueue& operator=(const EventQueue&) = delete;
+        EventQueue(EventQueue&&) = delete;
+        EventQueue& operator=(EventQueue&&) = delete;
 
-        [[nodiscard]] bool push(SMessage msg);
-        bool pop(SMessage& out);
+        [[nodiscard]] bool push(SEvent event);
+        bool pop(SEvent& out);
         void close() noexcept;
         [[nodiscard]] bool isClosed() const;
         [[nodiscard]] std::size_t size() const;
@@ -33,7 +36,7 @@ namespace App {
     private:
         mutable std::mutex m_mutex;
         std::condition_variable m_cv;
-        std::queue<SMessage> m_queue;
+        std::queue<SEvent> m_queue;
         bool m_closed{false};
     };
 } // namespace App

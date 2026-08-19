@@ -1,6 +1,6 @@
 #include <framework/TestFramework.hpp>
 
-#include <core/MessageQueue.hpp>
+#include <core/EventQueue.hpp>
 
 #include <logger/LogLevel.hpp>
 
@@ -10,18 +10,19 @@
 #include <thread>
 #include <vector>
 
-using App::MessageQueue;
-using App::SMessage;
+using App::EEventKind;
+using App::EventQueue;
+using App::SEvent;
 using Logger::ELogLevel;
 
-TEST(message_queue, keeps_the_fifo_order) {
-    MessageQueue queue;
+TEST(event_queue, keeps_the_fifo_order) {
+    EventQueue queue;
 
-    CHECK(queue.push({ELogLevel::Info, "first"}));
-    CHECK(queue.push({ELogLevel::Warn, "second"}));
+    CHECK(queue.push({EEventKind::Write, ELogLevel::Info, "first"}));
+    CHECK(queue.push({EEventKind::Write, ELogLevel::Warn, "second"}));
     REQUIRE_EQ(queue.size(), std::size_t{2});
 
-    SMessage message;
+    SEvent message;
     REQUIRE(queue.pop(message));
     CHECK_EQ(message.message, "first");
     CHECK_EQ(message.level, ELogLevel::Info);
@@ -31,29 +32,29 @@ TEST(message_queue, keeps_the_fifo_order) {
     CHECK_EQ(message.level, ELogLevel::Warn);
 }
 
-TEST(message_queue, pop_waits_for_a_push) {
-    MessageQueue queue;
+TEST(event_queue, pop_waits_for_a_push) {
+    EventQueue queue;
     std::atomic<bool> popped{false};
-    SMessage received;
+    SEvent received;
 
     std::thread consumer([&] {
         if (queue.pop(received)) popped.store(true);
     });
 
     CHECK(!popped.load());
-    CHECK(queue.push({ELogLevel::Info, "wake up"}));
+    CHECK(queue.push({EEventKind::Write, ELogLevel::Info, "wake up"}));
     consumer.join();
 
     REQUIRE(popped.load());
     CHECK_EQ(received.message, "wake up");
 }
 
-TEST(message_queue, close_wakes_a_waiting_consumer) {
-    MessageQueue queue;
+TEST(event_queue, close_wakes_a_waiting_consumer) {
+    EventQueue queue;
     std::atomic<bool> result{true};
 
     std::thread consumer([&] {
-        SMessage message;
+        SEvent message;
         result.store(queue.pop(message));
     });
 
@@ -64,14 +65,14 @@ TEST(message_queue, close_wakes_a_waiting_consumer) {
     CHECK(queue.isClosed());
 }
 
-TEST(message_queue, close_keeps_what_was_already_accepted) {
-    MessageQueue queue;
+TEST(event_queue, close_keeps_what_was_already_accepted) {
+    EventQueue queue;
 
-    CHECK(queue.push({ELogLevel::Info, "first"}));
-    CHECK(queue.push({ELogLevel::Info, "second"}));
+    CHECK(queue.push({EEventKind::Write, ELogLevel::Info, "first"}));
+    CHECK(queue.push({EEventKind::Write, ELogLevel::Info, "second"}));
     queue.close();
 
-    SMessage message;
+    SEvent message;
     REQUIRE(queue.pop(message));
     CHECK_EQ(message.message, "first");
 
@@ -81,23 +82,23 @@ TEST(message_queue, close_keeps_what_was_already_accepted) {
     CHECK(!queue.pop(message));
 }
 
-TEST(message_queue, push_into_a_closed_queue_is_refused) {
-    MessageQueue queue;
+TEST(event_queue, push_into_a_closed_queue_is_refused) {
+    EventQueue queue;
     queue.close();
 
-    CHECK(!queue.push({ELogLevel::Info, "too late"}));
+    CHECK(!queue.push({EEventKind::Write, ELogLevel::Info, "too late"}));
     CHECK_EQ(queue.size(), std::size_t{0});
 }
 
-TEST(message_queue, keeps_the_order_of_every_producer) {
+TEST(event_queue, keeps_the_order_of_every_producer) {
     constexpr int kProducers = 3;
     constexpr int kPerProducer = 200;
 
-    MessageQueue queue;
-    std::vector<SMessage> received;
+    EventQueue queue;
+    std::vector<SEvent> received;
 
     std::thread consumer([&] {
-        SMessage message;
+        SEvent message;
         while (queue.pop(message))
             received.push_back(std::move(message));
     });
@@ -108,7 +109,7 @@ TEST(message_queue, keeps_the_order_of_every_producer) {
         producers.emplace_back([&queue, id] {
             for (int index = 0; index < kPerProducer; ++index) {
                 std::string text = std::to_string(id) + ':' + std::to_string(index);
-                (void)queue.push({ELogLevel::Info, std::move(text)});
+                (void)queue.push({EEventKind::Write, ELogLevel::Info, std::move(text)});
             }
         });
     }

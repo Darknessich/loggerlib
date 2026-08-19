@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MessageQueue.hpp"
+#include "EventQueue.hpp"
 
 #include <logger/ILogger.hpp>
 
@@ -13,7 +13,7 @@
 namespace App {
     class LogWorker {
     public:
-        LogWorker(Logger::ILogger& logger, MessageQueue& queue) noexcept;
+        LogWorker(Logger::ILogger& logger, EventQueue& queue) noexcept;
         ~LogWorker();
 
         LogWorker(const LogWorker&) = delete;
@@ -29,10 +29,11 @@ namespace App {
 
     private:
         void loop();
+        void write(const SEvent& event);
         void recordFailure(std::string reason);
 
         Logger::ILogger& m_logger;
-        MessageQueue& m_queue;
+        EventQueue& m_queue;
         std::thread m_thread;
         std::atomic<std::size_t> m_processed{0};
         std::atomic<std::size_t> m_failed{0};

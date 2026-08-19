@@ -1,7 +1,7 @@
 #include "ConsoleApp.hpp"
+#include "EventQueue.hpp"
 #include "InputParser.hpp"
 #include "LogWorker.hpp"
-#include "MessageQueue.hpp"
 #include "Options.hpp"
 
 #include <logger/LogLevel.hpp>
@@ -37,11 +37,12 @@ namespace App {
         : m_logger{logger}, m_in{in}, m_out{out}, m_err{err}, m_showPrompt{showPrompt} {}
 
     EExitCode ConsoleApp::run() {
-        MessageQueue queue;
+        EventQueue queue;
         LogWorker worker{m_logger, queue};
         worker.start();
 
         bool running = true;
+        Logger::ELogLevel level = m_logger.level();
         std::string reportedReason;
         std::string line;
 
@@ -50,14 +51,15 @@ namespace App {
             if (!std::getline(m_in, line)) break;
             if (!line.empty() && line.back() == '\r') line.pop_back();
 
-            SUserInput input = parseUserInput(line, m_logger.level());
+            SUserInput input = parseUserInput(line, level);
             switch (input.kind) {
                 case EInputKind::Message:
-                    if (m_logger.isEnabled(input.level))
-                        running = queue.push({input.level, std::move(input.message)});
+                    running =
+                        queue.push({EEventKind::Write, input.level, std::move(input.message)});
                     break;
                 case EInputKind::SetLevel:
-                    m_logger.setLevel(input.level);
+                    level = input.level;
+                    running = queue.push({EEventKind::SetLevel, input.level, {}});
                     m_out << "level: " << Logger::level2string(input.level) << '\n';
                     break;
                 case EInputKind::Help:

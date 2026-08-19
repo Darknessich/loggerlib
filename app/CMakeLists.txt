@@ -1,5 +1,5 @@
 add_library(app_core STATIC
-    core/Options.cpp core/InputParser.cpp core/MessageQueue.cpp
+    core/Options.cpp core/InputParser.cpp core/EventQueue.cpp
     core/LogWorker.cpp core/ConsoleApp.cpp)
 target_include_directories(app_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(app_core PUBLIC Logger::Logger Threads::Threads)

@@ -28,7 +28,7 @@ logger_add_tests(logger_tests logger_static
 
 if(TARGET app_core)
     logger_add_tests(app_tests app_core
-        test_options.cpp test_input_parser.cpp test_message_queue.cpp
+        test_options.cpp test_input_parser.cpp test_event_queue.cpp
         test_log_worker.cpp test_console_app.cpp)
 endif()
 

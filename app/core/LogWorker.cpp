@@ -5,7 +5,7 @@
 #include <utility>
 
 namespace App {
-    LogWorker::LogWorker(Logger::ILogger& logger, MessageQueue& queue) noexcept
+    LogWorker::LogWorker(Logger::ILogger& logger, EventQueue& queue) noexcept
         : m_logger{logger}, m_queue{queue} {}
 
     LogWorker::~LogWorker() {
@@ -43,26 +43,39 @@ namespace App {
         m_failed.fetch_add(1, std::memory_order_relaxed);
     }
 
+    void LogWorker::write(const SEvent& event) {
+        if (!m_logger.isEnabled(event.level)) return;
+
+        std::error_code ec;
+        bool written = false;
+
+        try {
+            written = m_logger.log(event.level, event.message, ec);
+        } catch (const std::exception& error) {
+            recordFailure(error.what());
+            return;
+        } catch (...) {
+            recordFailure("unknown exception");
+            return;
+        }
+
+        if (written) {
+            m_processed.fetch_add(1, std::memory_order_relaxed);
+        } else {
+            recordFailure(ec ? ec.message() : "write failed");
+        }
+    }
+
     void LogWorker::loop() {
-        SMessage message;
-        while (m_queue.pop(message)) {
-            std::error_code ec;
-            bool written = false;
-
-            try {
-                written = m_logger.log(message.level, message.message, ec);
-            } catch (const std::exception& error) {
-                recordFailure(error.what());
-                continue;
-            } catch (...) {
-                recordFailure("unknown exception");
-                continue;
-            }
-
-            if (written) {
-                m_processed.fetch_add(1, std::memory_order_relaxed);
-            } else {
-                recordFailure(ec ? ec.message() : "write failed");
+        SEvent event;
+        while (m_queue.pop(event)) {
+            switch (event.kind) {
+                case EEventKind::Write:
+                    write(event);
+                    break;
+                case EEventKind::SetLevel:
+                    m_logger.setLevel(event.level);
+                    break;
             }
         }
     }

@@ -81,6 +81,25 @@ TEST(console_app, level_command_lowers_the_threshold) {
     CHECK_EQ(records[0].message, "kept");
 }
 
+TEST(console_app, messages_typed_before_a_level_command_keep_the_old_threshold) {
+    constexpr std::size_t kLines = 200;
+
+    RecordingLogger logger{ELogLevel::Debug};
+
+    std::string input;
+    for (std::size_t i = 0; i < kLines; ++i) {
+        input += "INFO message " + std::to_string(i) + '\n';
+    }
+    input += "/level ERROR\n";
+    input += "INFO dropped\n";
+
+    const auto session = run(logger, input);
+
+    CHECK_EQ(logger.level(), ELogLevel::Error);
+    CHECK_EQ(logger.count(), kLines);
+    CHECK(session.err.find(std::to_string(kLines) + " message(s), 0 failed") != std::string::npos);
+}
+
 TEST(console_app, a_message_below_the_threshold_never_reaches_the_logger) {
     RecordingLogger logger{ELogLevel::Warn};
     run(logger, "DEBUG hidden\nINFO hidden too\n");
