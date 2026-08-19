@@ -58,6 +58,43 @@ namespace {
             std::chrono::system_clock::from_time_t(raw) + std::chrono::milliseconds{millis}
         };
     }
+
+    constexpr char shortEscape(char c) noexcept {
+        switch (c) {
+            case '\\':
+                return '\\';
+            case '\n':
+                return 'n';
+            case '\r':
+                return 'r';
+            case '\t':
+                return 't';
+            default:
+                return '\0';
+        }
+    }
+
+    constexpr char shortUnescape(char c) noexcept {
+        switch (c) {
+            case '\\':
+                return '\\';
+            case 'n':
+                return '\n';
+            case 'r':
+                return '\r';
+            case 't':
+                return '\t';
+            default:
+                return '\0';
+        }
+    }
+
+    constexpr int hexValue(char c) noexcept {
+        if ('0' <= c && c <= '9') return c - '0';
+        if ('A' <= c && c <= 'F') return c - 'A' + 10;
+        if ('a' <= c && c <= 'f') return c - 'a' + 10;
+        return -1;
+    }
 } // namespace
 
 namespace Logger {
@@ -127,22 +164,21 @@ namespace Logger {
     }
 
     std::string escapeMessage(std::string_view message) {
+        constexpr char kHexDigits[] = "0123456789ABCDEF";
+
         std::string out;
         out.reserve(message.size());
-        for (auto c : message) {
-            switch (c) {
-                case '\\':
-                    out += "\\\\";
-                    break;
-                case '\n':
-                    out += "\\n";
-                    break;
-                case '\r':
-                    out += "\\r";
-                    break;
-                default:
-                    out += c;
-                    break;
+        for (const char c : message) {
+            const auto byte = static_cast<unsigned char>(c);
+            if (const char escaped = shortEscape(c)) {
+                out += '\\';
+                out += escaped;
+            } else if (byte < 0x20 || byte == 0x7F) {
+                out += "\\x";
+                out += kHexDigits[byte >> 4];
+                out += kHexDigits[byte & 0x0F];
+            } else {
+                out += c;
             }
         }
         return out;
@@ -156,21 +192,24 @@ namespace Logger {
                 out += message[i];
                 continue;
             }
-            switch (message[++i]) {
-                case 'n':
-                    out += '\n';
-                    break;
-                case 'r':
-                    out += '\r';
-                    break;
-                case '\\':
-                    out += '\\';
-                    break;
-                default:
-                    out += '\\';
-                    out += message[i];
-                    break;
+
+            if (const char plain = shortUnescape(message[i + 1])) {
+                out += plain;
+                ++i;
+                continue;
             }
+
+            if (message[i + 1] == 'x' && i + 3 < message.size()) {
+                const int high = hexValue(message[i + 2]);
+                const int low = hexValue(message[i + 3]);
+                if (high >= 0 && low >= 0) {
+                    out += static_cast<char>((high << 4) | low);
+                    i += 3;
+                    continue;
+                }
+            }
+
+            out += message[i];
         }
         return out;
     }

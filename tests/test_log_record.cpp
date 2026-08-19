@@ -81,7 +81,7 @@ TEST(log_record, escaping_is_reversible) {
     CHECK_EQ(Logger::escapeMessage("a\nb"), "a\\nb");
     CHECK_EQ(Logger::escapeMessage("a\rb"), "a\\rb");
     CHECK_EQ(Logger::escapeMessage("a\\b"), "a\\\\b");
-    CHECK_EQ(Logger::escapeMessage("\t"), "\t");
+    CHECK_EQ(Logger::escapeMessage("\t"), "\\t");
 
     CHECK(Logger::escapeMessage("a\nb") != Logger::escapeMessage("a\\nb"));
 
@@ -91,11 +91,64 @@ TEST(log_record, escaping_is_reversible) {
     }
 }
 
+TEST(log_record, escaping_round_trips_every_byte) {
+    for (int value = 0; value <= 0xFF; ++value) {
+        const std::string original(1, static_cast<char>(value));
+        const std::string escaped = Logger::escapeMessage(original);
+
+        CHECK(escaped.find('\n') == std::string::npos);
+        CHECK(escaped.find('\r') == std::string::npos);
+        CHECK_EQ(Logger::unescapeMessage(escaped), original);
+    }
+}
+
+TEST(log_record, escapes_control_characters) {
+    CHECK_EQ(Logger::escapeMessage("\x1b[2J"), "\\x1B[2J");
+    CHECK_EQ(Logger::escapeMessage(std::string(1, '\0')), "\\x00");
+    CHECK_EQ(Logger::escapeMessage("\x7f"), "\\x7F");
+    CHECK_EQ(Logger::escapeMessage("\x01\x1f"), "\\x01\\x1F");
+}
+
+TEST(log_record, leaves_utf8_untouched) {
+    const std::string text = "юникод — ok";
+    CHECK_EQ(Logger::escapeMessage(text), text);
+}
+
+TEST(log_record, unescaping_accepts_any_hex_escape) {
+    CHECK_EQ(Logger::unescapeMessage("\\x21"), "!");
+    CHECK_EQ(Logger::unescapeMessage("\\x2a"), "*");
+    CHECK_EQ(Logger::escapeMessage("!"), "!");
+}
+
 TEST(log_record, unescaping_tolerates_malformed_input) {
     CHECK_EQ(Logger::unescapeMessage("a\\qb"), "a\\qb");
     CHECK_EQ(Logger::unescapeMessage("a\\"), "a\\");
     CHECK_EQ(Logger::unescapeMessage("\\"), "\\");
     CHECK_EQ(Logger::unescapeMessage(""), "");
+
+    CHECK_EQ(Logger::unescapeMessage("\\x"), "\\x");
+    CHECK_EQ(Logger::unescapeMessage("\\x1"), "\\x1");
+    CHECK_EQ(Logger::unescapeMessage("\\xZZ"), "\\xZZ");
+    CHECK_EQ(Logger::unescapeMessage("\\x0Z"), "\\x0Z");
+}
+
+TEST(log_record, control_characters_survive_a_record_round_trip) {
+    std::string message = "before";
+    message += '\x1b';
+    message += '\t';
+    message += '\0';
+    message += "after";
+
+    const std::string line = Logger::formatRecord({instant(0), ELogLevel::Info, message});
+    CHECK(line.find('\x1b') == std::string::npos);
+    CHECK(line.find('\n') == std::string::npos);
+
+    const auto parsed = Logger::parseRecord(line);
+    REQUIRE(parsed.has_value());
+    CHECK_EQ(parsed->message, message);
+
+    CHECK(Logger::escapeMessage(message).size() > message.size());
+    CHECK_EQ(parsed->message.size(), message.size());
 }
 
 TEST(log_record, rejects_short_and_truncated_lines) {
