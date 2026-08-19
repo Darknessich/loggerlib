@@ -88,3 +88,31 @@ TEST(options, help_wins_over_a_missing_path) {
     REQUIRE_EQ(parsed.kind, EOptionsKind::Help);
     CHECK(parsed.error.empty());
 }
+
+TEST(options, double_dash_ends_the_options) {
+    const auto parsed = parse({"logger_app", "--", "-x.log", "WARN"});
+
+    REQUIRE_EQ(parsed.kind, EOptionsKind::Run);
+    CHECK_EQ(parsed.path, "-x.log");
+    CHECK_EQ(parsed.level, ELogLevel::Warn);
+}
+
+TEST(options, everything_after_a_double_dash_is_positional) {
+    const auto parsed = parse({"logger_app", "--", "--help"});
+
+    REQUIRE_EQ(parsed.kind, EOptionsKind::Run);
+    CHECK_EQ(parsed.path, "--help");
+}
+
+TEST(options, a_double_dash_alone_leaves_the_path_missing) {
+    const auto parsed = parse({"logger_app", "--"});
+
+    REQUIRE_EQ(parsed.kind, EOptionsKind::Error);
+    CHECK(parsed.error.find("required") != std::string::npos);
+}
+
+TEST(options, options_before_a_double_dash_still_work) {
+    const auto parsed = parse({"logger_app", "--help", "--", "-x.log"});
+
+    REQUIRE_EQ(parsed.kind, EOptionsKind::Help);
+}

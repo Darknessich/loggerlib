@@ -36,9 +36,11 @@ namespace App {
     }
 
     void LogWorker::recordFailure(std::string reason) {
+        {
+            const std::lock_guard lock(m_errorMutex);
+            m_lastError = std::move(reason);
+        }
         m_failed.fetch_add(1, std::memory_order_relaxed);
-        const std::lock_guard lock(m_errorMutex);
-        m_lastError = std::move(reason);
     }
 
     void LogWorker::loop() {

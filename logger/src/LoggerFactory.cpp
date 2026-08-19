@@ -3,7 +3,6 @@
 #include "FileLogger.hpp"
 
 #include <cerrno>
-#include <cstddef>
 #include <fstream>
 #include <utility>
 
@@ -12,7 +11,7 @@ namespace Logger {
     createFileLogger(const std::string& path, ELogLevel level, std::error_code& ec) {
         ec.clear();
 
-        if (static_cast<std::size_t>(level) >= static_cast<std::size_t>(ELogLevel::Count)) {
+        if (!isValidLevel(level)) {
             ec = std::make_error_code(std::errc::invalid_argument);
             return nullptr;
         }

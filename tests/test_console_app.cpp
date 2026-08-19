@@ -6,9 +6,12 @@
 #include <logger/LogLevel.hpp>
 
 #include <cstddef>
+#include <ios>
+#include <istream>
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <utility>
 
 using App::EExitCode;
 using Logger::ELogLevel;
@@ -170,6 +173,89 @@ TEST(console_app, names_the_failure_reason) {
     CHECK(session.err.find(reason) != std::string::npos);
 
     CHECK(session.err.find("1 failed: " + reason) != std::string::npos);
+}
+
+TEST(console_app, strips_the_carriage_return_of_a_crlf_line) {
+    RecordingLogger logger{ELogLevel::Debug};
+    run(logger, "hello\r\nWARN disk\r\n");
+
+    const auto records = logger.records();
+    REQUIRE_EQ(records.size(), std::size_t{2});
+    CHECK_EQ(records[0].message, "hello");
+    CHECK_EQ(records[1].level, ELogLevel::Warn);
+    CHECK_EQ(records[1].message, "disk");
+}
+
+TEST(console_app, keeps_a_carriage_return_that_is_not_a_terminator) {
+    RecordingLogger logger{ELogLevel::Debug};
+    run(logger, "\rleading\nmid\rdle\ntrailing\r\r\n");
+
+    const auto records = logger.records();
+    REQUIRE_EQ(records.size(), std::size_t{3});
+    CHECK_EQ(records[0].message, "\rleading");
+    CHECK_EQ(records[1].message, "mid\rdle");
+    CHECK_EQ(records[2].message, "trailing\r");
+}
+
+TEST(console_app, recognises_a_command_typed_with_crlf) {
+    RecordingLogger logger{ELogLevel::Debug};
+    run(logger, "before\r\n/quit\r\nafter\r\n");
+
+    const auto records = logger.records();
+    REQUIRE_EQ(records.size(), std::size_t{1});
+    CHECK_EQ(records[0].message, "before");
+}
+
+TEST(console_app, names_the_reason_while_the_session_is_still_running) {
+    class GatedInput : public std::stringbuf {
+    public:
+        GatedInput(
+            const std::string& first,
+            std::string rest,
+            std::size_t failures,
+            const RecordingLogger& logger
+        )
+            : std::stringbuf{first, std::ios::in}, m_rest{std::move(rest)}, m_failures{failures},
+              m_logger{&logger} {}
+
+    protected:
+        int_type underflow() override {
+            const int_type next = std::stringbuf::underflow();
+            if (next != traits_type::eof() || m_rest.empty()) return next;
+
+            m_logger->waitForFailures(m_failures);
+            str(m_rest);
+            m_rest.clear();
+            return std::stringbuf::underflow();
+        }
+
+    private:
+        std::string m_rest;
+        std::size_t m_failures;
+        const RecordingLogger* m_logger;
+    };
+
+    RecordingLogger logger{ELogLevel::Debug};
+    logger.failWrites(std::make_error_code(std::errc::no_space_on_device));
+
+    GatedInput gate{"one\ntwo\n", "three\n", 2, logger};
+    std::istream in{&gate};
+    std::ostringstream out;
+    std::ostringstream err;
+
+    App::ConsoleApp application{logger, in, out, err, false};
+    const EExitCode code = application.run();
+    REQUIRE_EQ(code, EExitCode::WriteFailed);
+
+    const std::string reason = std::make_error_code(std::errc::no_space_on_device).message();
+    const std::string text = err.str();
+
+    const auto inLoop = text.find("log write failed: " + reason);
+    const auto summary = text.find("3 failed: " + reason);
+
+    CHECK(inLoop != std::string::npos);
+    CHECK(summary != std::string::npos);
+    CHECK(inLoop < summary);
 }
 
 TEST(console_app, prints_no_prompt_when_it_is_switched_off) {

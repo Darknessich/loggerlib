@@ -11,7 +11,7 @@
 namespace Logger {
     struct SLogRecord {
         std::chrono::system_clock::time_point time;
-        ELogLevel level;
+        ELogLevel level{ELogLevel::Info};
         std::string message;
     };
 

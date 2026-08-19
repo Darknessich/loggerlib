@@ -3,14 +3,18 @@
 #include <logger/LogLevel.hpp>
 
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 
 using Logger::ELogLevel;
 
 namespace {
     constexpr std::size_t kLevelCount = static_cast<std::size_t>(ELogLevel::Count);
-}
+    constexpr std::size_t kUnderlyingMax =
+        std::numeric_limits<std::underlying_type_t<ELogLevel>>::max();
+} // namespace
 
 TEST(log_level, names_match_the_enumeration) {
     CHECK_EQ(Logger::level2string(ELogLevel::Debug), "DEBUG");
@@ -73,6 +77,33 @@ TEST(log_level, unknown_text_is_rejected) {
 TEST(log_level, non_ascii_input_is_rejected) {
     CHECK(!Logger::string2level("инфо").has_value());
     CHECK(!Logger::string2level("\xD0\x9F").has_value());
+}
+
+TEST(log_level, every_enumerator_is_valid) {
+    CHECK(Logger::isValidLevel(ELogLevel::Debug));
+    CHECK(Logger::isValidLevel(ELogLevel::Info));
+    CHECK(Logger::isValidLevel(ELogLevel::Warn));
+    CHECK(Logger::isValidLevel(ELogLevel::Error));
+    CHECK(Logger::isValidLevel(ELogLevel::Fatal));
+
+    for (std::size_t index = 0; index < kLevelCount; ++index) {
+        CHECK(Logger::isValidLevel(static_cast<ELogLevel>(index)));
+    }
+}
+
+TEST(log_level, sentinel_and_out_of_range_are_invalid) {
+    CHECK(!Logger::isValidLevel(ELogLevel::Count));
+    CHECK(!Logger::isValidLevel(static_cast<ELogLevel>(kLevelCount + 1)));
+    CHECK(!Logger::isValidLevel(static_cast<ELogLevel>(42)));
+    CHECK(!Logger::isValidLevel(static_cast<ELogLevel>(-1)));
+    CHECK(!Logger::isValidLevel(static_cast<ELogLevel>(kUnderlyingMax)));
+}
+
+TEST(log_level, validity_agrees_with_the_name_table) {
+    for (std::size_t raw = 0; raw <= kUnderlyingMax; ++raw) {
+        const auto level = static_cast<ELogLevel>(raw);
+        CHECK_EQ(Logger::isValidLevel(level), Logger::level2string(level) != "UNKNOWN");
+    }
 }
 
 TEST(log_level, order_matches_severity) {

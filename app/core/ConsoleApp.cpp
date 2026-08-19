@@ -48,6 +48,7 @@ namespace App {
         while (running) {
             if (m_showPrompt) m_out << "> " << std::flush;
             if (!std::getline(m_in, line)) break;
+            if (!line.empty() && line.back() == '\r') line.pop_back();
 
             SUserInput input = parseUserInput(line, m_logger.level());
             switch (input.kind) {

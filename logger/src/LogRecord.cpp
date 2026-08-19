@@ -1,6 +1,5 @@
 #include <logger/LogRecord.hpp>
 
-#include <cerrno>
 #include <charconv>
 #include <cstddef>
 #include <cstdio>
@@ -44,19 +43,22 @@ namespace {
         parts.tm_year = year - 1900;
         parts.tm_mon = month - 1;
 
-        errno = 0;
+        constexpr auto kMaxDuration = std::chrono::system_clock::duration::max();
+        constexpr auto kMinStamp = std::chrono::milliseconds::zero();
+        constexpr auto kMaxStamp =
+            std::chrono::duration_cast<std::chrono::milliseconds>(kMaxDuration);
+
         const auto requested = parts;
         const std::time_t raw = ::timegm(&parts);
-        if (raw == static_cast<std::time_t>(-1) && errno != 0) return std::nullopt;
+        const auto stamp = std::chrono::seconds{raw} + std::chrono::milliseconds{millis};
+        if (stamp < kMinStamp || stamp > kMaxStamp) return std::nullopt;
 
         if (parts.tm_year != requested.tm_year || parts.tm_mon != requested.tm_mon ||
             parts.tm_mday != requested.tm_mday || parts.tm_hour != requested.tm_hour ||
             parts.tm_min != requested.tm_min || parts.tm_sec != requested.tm_sec)
             return std::nullopt;
 
-        return std::optional{
-            std::chrono::system_clock::from_time_t(raw) + std::chrono::milliseconds{millis}
-        };
+        return std::optional{std::chrono::system_clock::time_point{stamp}};
     }
 
     constexpr char shortEscape(char c) noexcept {

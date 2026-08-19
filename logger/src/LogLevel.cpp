@@ -48,7 +48,7 @@ namespace Logger {
 
     std::string_view level2string(ELogLevel level) noexcept {
         const std::size_t index = static_cast<std::size_t>(level);
-        return index < kLevelNames.size() ? kLevelNames[index].name : std::string_view{"UNKNOWN"};
+        return isValidLevel(level) ? kLevelNames[index].name : std::string_view{"UNKNOWN"};
     }
 
     std::optional<ELogLevel> string2level(std::string_view str) noexcept {
@@ -58,5 +58,9 @@ namespace Logger {
             }
         }
         return std::nullopt;
+    }
+
+    bool isValidLevel(ELogLevel level) noexcept {
+        return level < ELogLevel::Count;
     }
 } // namespace Logger

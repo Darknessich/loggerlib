@@ -10,7 +10,7 @@ namespace Logger {
 
     bool LoggerBase::log(ELogLevel level, std::string_view message, std::error_code& ec) {
         ec.clear();
-        if (level >= ELogLevel::Count) {
+        if (!isValidLevel(level)) {
             ec = std::make_error_code(std::errc::invalid_argument);
             return false;
         }

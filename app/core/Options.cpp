@@ -11,17 +11,26 @@ namespace App {
         std::optional<std::string_view> pathText;
         std::optional<std::string_view> levelText;
 
+        bool optionsEnded = false;
+
         for (int index = 1; index < argc; ++index) {
             const std::string_view argument{argv[index]};
 
-            if (argument == "--help" || argument == "-h") {
-                parsed.kind = EOptionsKind::Help;
-                return parsed;
-            }
+            if (!optionsEnded) {
+                if (argument == "--") {
+                    optionsEnded = true;
+                    continue;
+                }
 
-            if (!argument.empty() && argument.front() == '-') {
-                parsed.error = "unknown option: " + std::string{argument};
-                return parsed;
+                if (argument == "--help" || argument == "-h") {
+                    parsed.kind = EOptionsKind::Help;
+                    return parsed;
+                }
+
+                if (!argument.empty() && argument.front() == '-') {
+                    parsed.error = "unknown option: " + std::string{argument};
+                    return parsed;
+                }
             }
 
             if (!pathText) {
@@ -59,7 +68,7 @@ namespace App {
 
     void printUsage(const char* program, std::ostream& stream) {
         stream << "Usage: " << program
-               << " <logfile> [level]\n"
+               << " [--] <logfile> [level]\n"
                   "       "
                << program
                << " --help\n"

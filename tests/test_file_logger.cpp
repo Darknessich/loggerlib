@@ -98,7 +98,11 @@ TEST(file_logger, reports_open_failure) {
 TEST(file_logger, rejects_an_invalid_level) {
     const TempFile file{"file_logger_invalid_level.log"};
 
-    for (const ELogLevel level : {ELogLevel::Count, static_cast<ELogLevel>(42)}) {
+    for (const ELogLevel level :
+         {ELogLevel::Count,
+          static_cast<ELogLevel>(42),
+          static_cast<ELogLevel>(255),
+          static_cast<ELogLevel>(-1)}) {
         std::error_code ec;
         const auto logger = Logger::createFileLogger(file.path(), level, ec);
 
@@ -115,6 +119,21 @@ TEST(file_logger, reports_a_write_failure) {
     std::error_code ec;
     CHECK(!logger.log(ELogLevel::Info, "nowhere", ec));
     CHECK(static_cast<bool>(ec));
+}
+
+TEST(file_logger, keeps_reporting_the_real_reason_after_a_failure) {
+    std::ofstream full{"/dev/full", std::ios::out | std::ios::app};
+    if (!full.is_open()) return;
+
+    Logger::FileLogger logger{std::move(full), ELogLevel::Debug};
+
+    std::error_code first;
+    std::error_code second;
+    CHECK(!logger.log(ELogLevel::Info, "one", first));
+    CHECK(!logger.log(ELogLevel::Info, "two", second));
+
+    CHECK(first != std::errc::io_error);
+    CHECK(second == first);
 }
 
 TEST(file_logger, leaves_the_error_code_clear_on_success) {

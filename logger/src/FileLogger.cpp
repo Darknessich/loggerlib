@@ -1,5 +1,6 @@
 #include "FileLogger.hpp"
 
+#include <cerrno>
 #include <utility>
 
 namespace Logger {
@@ -7,6 +8,7 @@ namespace Logger {
         : LoggerBase(level), m_fstream{std::move(stream)} {}
 
     bool FileLogger::writeLine(std::string_view line, std::error_code& ec) {
+        m_fstream.clear();
         errno = 0;
         m_fstream << line << '\n' << std::flush;
         if (m_fstream.good()) return true;

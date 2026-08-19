@@ -32,7 +32,8 @@ if(TARGET app_core)
         test_log_worker.cpp test_console_app.cpp)
 endif()
 
-add_executable(logger_shared_smoke smoke/main.cpp)
+add_executable(logger_shared_smoke smoke/main.cpp utils/TempFile.cpp)
+target_include_directories(logger_shared_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(logger_shared_smoke PRIVATE logger_shared)
 logger_apply_warnings(logger_shared_smoke)
 

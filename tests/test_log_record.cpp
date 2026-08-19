@@ -22,6 +22,32 @@ namespace {
         return std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch())
             .count();
     }
+
+    void useTimeZone(const char* zone) {
+        ::setenv("TZ", zone, 1);
+        ::tzset();
+    }
+
+    void useTheDefaultTimeZone() {
+        ::unsetenv("TZ");
+        ::tzset();
+    }
+
+    bool timeZonesAreInstalled() {
+        const auto localSecondsAtEpoch = [](const char* zone) {
+            useTimeZone(zone);
+
+            std::tm epoch{};
+            epoch.tm_year = 1970 - 1900;
+            epoch.tm_mday = 1;
+            return ::mktime(&epoch);
+        };
+
+        const bool differ =
+            localSecondsAtEpoch("Europe/Moscow") != localSecondsAtEpoch("Pacific/Chatham");
+        useTheDefaultTimeZone();
+        return differ;
+    }
 } // namespace
 
 TEST(log_record, formats_known_instants) {
@@ -187,7 +213,37 @@ TEST(log_record, handles_leap_years) {
     CHECK(Logger::parseRecord("2024-02-29 00:00:00.000Z [INFO] x").has_value());
     CHECK(Logger::parseRecord("2000-02-29 00:00:00.000Z [INFO] x").has_value());
     CHECK(!Logger::parseRecord("2023-02-29 00:00:00.000Z [INFO] x").has_value());
-    CHECK(!Logger::parseRecord("1900-02-29 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("2100-02-29 00:00:00.000Z [INFO] x").has_value());
+}
+
+TEST(log_record, rejects_the_unknown_timestamp_placeholder) {
+    CHECK(!Logger::parseRecord("0000-00-00 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("0000-00-00 00:00:00.123Z [WARN] x").has_value());
+}
+
+TEST(log_record, rejects_timestamps_before_the_epoch) {
+    CHECK(!Logger::parseRecord("1969-12-31 23:59:59.999Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1900-01-01 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("1000-01-01 00:00:00.000Z [INFO] x").has_value());
+    CHECK(!Logger::parseRecord("0001-01-01 00:00:00.000Z [INFO] x").has_value());
+}
+
+TEST(log_record, parses_the_epoch_exactly) {
+    const auto epoch = Logger::parseRecord("1970-01-01 00:00:00.000Z [INFO] x");
+    REQUIRE(epoch.has_value());
+    CHECK_EQ(millisSinceEpoch(epoch->time), std::int64_t{0});
+}
+
+TEST(log_record, an_accepted_timestamp_reformats_to_itself) {
+    for (const std::string line :
+         {"1970-01-01 00:00:00.000Z [INFO] x",
+          "2001-09-09 01:46:40.123Z [WARN] hello",
+          "2100-06-15 12:30:45.678Z [DEBUG] mid",
+          "2262-04-11 23:47:15.000Z [INFO] x"}) {
+        const auto parsed = Logger::parseRecord(line);
+        REQUIRE(parsed.has_value());
+        CHECK_EQ(Logger::formatRecord(*parsed), line);
+    }
 }
 
 TEST(log_record, accepts_boundary_values) {
@@ -221,17 +277,38 @@ TEST(log_record, formats_a_view_without_a_terminator) {
 }
 
 TEST(log_record, output_does_not_depend_on_the_local_time_zone) {
+    REQUIRE(timeZonesAreInstalled());
+
     const auto formatUnder = [](const char* zone) {
-        ::setenv("TZ", zone, 1);
-        ::tzset();
+        useTimeZone(zone);
         return Logger::formatRecord({instant(0, 123), ELogLevel::Info, "hello"});
     };
 
     const auto moscow = formatUnder("Europe/Moscow");
     const auto chatham = formatUnder("Pacific/Chatham");
-    ::unsetenv("TZ");
-    ::tzset();
+    useTheDefaultTimeZone();
 
     CHECK_EQ(moscow, "1970-01-01 00:00:00.123Z [INFO] hello");
     CHECK_EQ(chatham, moscow);
+}
+
+TEST(log_record, parsing_does_not_depend_on_the_local_time_zone) {
+    REQUIRE(timeZonesAreInstalled());
+
+    const std::string line = "2001-09-09 01:46:40.123Z [INFO] hello";
+
+    const auto parseUnder = [&line](const char* zone) {
+        useTimeZone(zone);
+        return Logger::parseRecord(line);
+    };
+
+    const auto moscow = parseUnder("Europe/Moscow");
+    const auto chatham = parseUnder("Pacific/Chatham");
+    useTheDefaultTimeZone();
+
+    REQUIRE(moscow.has_value());
+    REQUIRE(chatham.has_value());
+
+    CHECK_EQ(millisSinceEpoch(moscow->time), millisSinceEpoch(chatham->time));
+    CHECK_EQ(Logger::formatRecord(*moscow), line);
 }

@@ -125,7 +125,11 @@ TEST(logger_base, error_code_comes_from_write_line_unchanged) {
 TEST(logger_base, rejects_a_level_outside_the_enumeration) {
     RecordingLogger logger{ELogLevel::Debug};
 
-    for (const ELogLevel level : {ELogLevel::Count, static_cast<ELogLevel>(42)}) {
+    for (const ELogLevel level :
+         {ELogLevel::Count,
+          static_cast<ELogLevel>(42),
+          static_cast<ELogLevel>(255),
+          static_cast<ELogLevel>(-1)}) {
         std::error_code ec;
         CHECK(!logger.log(level, "garbage", ec));
         CHECK(ec == std::errc::invalid_argument);

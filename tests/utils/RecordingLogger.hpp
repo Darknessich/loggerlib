@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <condition_variable>
 #include <cstddef>
 #include <mutex>
 #include <stdexcept>
@@ -37,7 +38,13 @@ namespace utils {
 
             ec = m_errors[std::min(m_failures, m_errors.size() - 1)];
             ++m_failures;
+            m_failureAdded.notify_all();
             return false;
+        }
+
+        void waitForFailures(std::size_t count) const {
+            std::unique_lock lock(m_mutex);
+            m_failureAdded.wait(lock, [this, count] { return m_failures >= count; });
         }
 
         void setLevel(Logger::ELogLevel level) noexcept override {
@@ -76,6 +83,7 @@ namespace utils {
     private:
         std::atomic<Logger::ELogLevel> m_level;
         mutable std::mutex m_mutex;
+        mutable std::condition_variable m_failureAdded;
         std::vector<std::error_code> m_errors;
         std::size_t m_failures = 0;
         bool m_throws = false;
