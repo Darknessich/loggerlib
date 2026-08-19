@@ -90,28 +90,26 @@ TEST(options, help_wins_over_a_missing_path) {
 }
 
 TEST(options, double_dash_ends_the_options) {
-    const auto parsed = parse({"logger_app", "--", "-x.log", "WARN"});
+    const auto file = parse({"logger_app", "--", "-x.log", "WARN"});
 
-    REQUIRE_EQ(parsed.kind, EOptionsKind::Run);
-    CHECK_EQ(parsed.path, "-x.log");
-    CHECK_EQ(parsed.level, ELogLevel::Warn);
+    REQUIRE_EQ(file.kind, EOptionsKind::Run);
+    CHECK_EQ(file.path, "-x.log");
+    CHECK_EQ(file.level, ELogLevel::Warn);
+
+    const auto help = parse({"logger_app", "--", "--help"});
+
+    REQUIRE_EQ(help.kind, EOptionsKind::Run);
+    CHECK_EQ(help.path, "--help");
 }
 
-TEST(options, everything_after_a_double_dash_is_positional) {
-    const auto parsed = parse({"logger_app", "--", "--help"});
-
-    REQUIRE_EQ(parsed.kind, EOptionsKind::Run);
-    CHECK_EQ(parsed.path, "--help");
-}
-
-TEST(options, a_double_dash_alone_leaves_the_path_missing) {
+TEST(options, double_dash_alone_is_not_a_path) {
     const auto parsed = parse({"logger_app", "--"});
 
     REQUIRE_EQ(parsed.kind, EOptionsKind::Error);
     CHECK(parsed.error.find("required") != std::string::npos);
 }
 
-TEST(options, options_before_a_double_dash_still_work) {
+TEST(options, help_before_a_double_dash_wins) {
     const auto parsed = parse({"logger_app", "--help", "--", "-x.log"});
 
     REQUIRE_EQ(parsed.kind, EOptionsKind::Help);

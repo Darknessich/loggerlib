@@ -36,7 +36,7 @@ namespace {
     }
 } // namespace
 
-TEST(console_app, logs_plain_lines_at_the_default_level) {
+TEST(console_app, uses_the_default_level) {
     RecordingLogger logger{ELogLevel::Info};
     const auto session = run(logger, "first\nsecond\n");
 
@@ -81,7 +81,7 @@ TEST(console_app, level_command_lowers_the_threshold) {
     CHECK_EQ(records[0].message, "kept");
 }
 
-TEST(console_app, messages_typed_before_a_level_command_keep_the_old_threshold) {
+TEST(console_app, level_command_spares_queued_messages) {
     constexpr std::size_t kLines = 200;
 
     RecordingLogger logger{ELogLevel::Debug};
@@ -100,7 +100,7 @@ TEST(console_app, messages_typed_before_a_level_command_keep_the_old_threshold) 
     CHECK(session.err.find(std::to_string(kLines) + " message(s), 0 failed") != std::string::npos);
 }
 
-TEST(console_app, a_message_below_the_threshold_never_reaches_the_logger) {
+TEST(console_app, drops_a_message_below_the_threshold) {
     RecordingLogger logger{ELogLevel::Warn};
     run(logger, "DEBUG hidden\nINFO hidden too\n");
 
@@ -116,7 +116,7 @@ TEST(console_app, quit_stops_reading) {
     CHECK_EQ(records[0].message, "before");
 }
 
-TEST(console_app, nothing_is_lost_when_the_input_ends) {
+TEST(console_app, drains_the_queue_on_eof) {
     constexpr std::size_t kLines = 200;
 
     RecordingLogger logger{ELogLevel::Debug};
@@ -146,7 +146,7 @@ TEST(console_app, reports_an_unknown_command) {
     CHECK(session.err.find("/bogus") != std::string::npos);
 }
 
-TEST(console_app, an_unknown_level_leaves_the_threshold_alone) {
+TEST(console_app, rejects_an_unknown_level) {
     RecordingLogger logger{ELogLevel::Info};
     const auto session = run(logger, "/level NOPE\n");
 
@@ -194,7 +194,7 @@ TEST(console_app, names_the_failure_reason) {
     CHECK(session.err.find("1 failed: " + reason) != std::string::npos);
 }
 
-TEST(console_app, strips_the_carriage_return_of_a_crlf_line) {
+TEST(console_app, strips_a_crlf_terminator) {
     RecordingLogger logger{ELogLevel::Debug};
     run(logger, "hello\r\nWARN disk\r\n");
 
@@ -205,7 +205,7 @@ TEST(console_app, strips_the_carriage_return_of_a_crlf_line) {
     CHECK_EQ(records[1].message, "disk");
 }
 
-TEST(console_app, keeps_a_carriage_return_that_is_not_a_terminator) {
+TEST(console_app, keeps_an_inner_carriage_return) {
     RecordingLogger logger{ELogLevel::Debug};
     run(logger, "\rleading\nmid\rdle\ntrailing\r\r\n");
 
@@ -216,7 +216,7 @@ TEST(console_app, keeps_a_carriage_return_that_is_not_a_terminator) {
     CHECK_EQ(records[2].message, "trailing\r");
 }
 
-TEST(console_app, recognises_a_command_typed_with_crlf) {
+TEST(console_app, reads_a_command_with_crlf) {
     RecordingLogger logger{ELogLevel::Debug};
     run(logger, "before\r\n/quit\r\nafter\r\n");
 
@@ -225,7 +225,7 @@ TEST(console_app, recognises_a_command_typed_with_crlf) {
     CHECK_EQ(records[0].message, "before");
 }
 
-TEST(console_app, names_the_reason_while_the_session_is_still_running) {
+TEST(console_app, names_the_reason_in_the_loop) {
     class GatedInput : public std::stringbuf {
     public:
         GatedInput(
@@ -277,7 +277,7 @@ TEST(console_app, names_the_reason_while_the_session_is_still_running) {
     CHECK(inLoop < summary);
 }
 
-TEST(console_app, prints_no_prompt_when_it_is_switched_off) {
+TEST(console_app, omits_the_prompt) {
     RecordingLogger logger{ELogLevel::Debug};
     const auto session = run(logger, "one\ntwo\n");
 

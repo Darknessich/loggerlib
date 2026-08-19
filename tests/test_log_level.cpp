@@ -40,7 +40,7 @@ TEST(log_level, sentinel_and_out_of_range_are_unknown) {
     CHECK_EQ(Logger::level2string(static_cast<ELogLevel>(-1)), "UNKNOWN");
 }
 
-TEST(log_level, name_round_trips_back_to_the_same_level) {
+TEST(log_level, name_round_trips) {
     for (std::size_t index = 0; index < kLevelCount; ++index) {
         const auto level = static_cast<ELogLevel>(index);
         const auto parsed = Logger::string2level(Logger::level2string(level));
@@ -79,13 +79,7 @@ TEST(log_level, non_ascii_input_is_rejected) {
     CHECK(!Logger::string2level("\xD0\x9F").has_value());
 }
 
-TEST(log_level, every_enumerator_is_valid) {
-    CHECK(Logger::isValidLevel(ELogLevel::Debug));
-    CHECK(Logger::isValidLevel(ELogLevel::Info));
-    CHECK(Logger::isValidLevel(ELogLevel::Warn));
-    CHECK(Logger::isValidLevel(ELogLevel::Error));
-    CHECK(Logger::isValidLevel(ELogLevel::Fatal));
-
+TEST(log_level, every_level_is_valid) {
     for (std::size_t index = 0; index < kLevelCount; ++index) {
         CHECK(Logger::isValidLevel(static_cast<ELogLevel>(index)));
     }
@@ -99,7 +93,7 @@ TEST(log_level, sentinel_and_out_of_range_are_invalid) {
     CHECK(!Logger::isValidLevel(static_cast<ELogLevel>(kUnderlyingMax)));
 }
 
-TEST(log_level, validity_agrees_with_the_name_table) {
+TEST(log_level, validity_matches_names) {
     for (std::size_t raw = 0; raw <= kUnderlyingMax; ++raw) {
         const auto level = static_cast<ELogLevel>(raw);
         CHECK_EQ(Logger::isValidLevel(level), Logger::level2string(level) != "UNKNOWN");

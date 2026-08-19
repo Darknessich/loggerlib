@@ -121,7 +121,7 @@ TEST(file_logger, reports_a_write_failure) {
     CHECK(static_cast<bool>(ec));
 }
 
-TEST(file_logger, keeps_reporting_the_real_reason_after_a_failure) {
+TEST(file_logger, repeats_the_real_reason) {
     std::ofstream full{"/dev/full", std::ios::out | std::ios::app};
     if (!full.is_open()) return;
 
@@ -136,7 +136,7 @@ TEST(file_logger, keeps_reporting_the_real_reason_after_a_failure) {
     CHECK(second == first);
 }
 
-TEST(file_logger, leaves_the_error_code_clear_on_success) {
+TEST(file_logger, clears_the_error_code_on_success) {
     const TempFile file{"file_logger_clear_ec.log"};
 
     std::error_code ec;

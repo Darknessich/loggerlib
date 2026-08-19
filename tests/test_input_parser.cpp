@@ -40,7 +40,7 @@ TEST(input_parser, only_the_first_word_can_be_a_level) {
     CHECK_EQ(input.message, "the ERROR happened");
 }
 
-TEST(input_parser, a_level_without_text_is_an_error) {
+TEST(input_parser, rejects_a_level_without_text) {
     const auto input = parseUserInput("WARN", ELogLevel::Info);
 
     REQUIRE_EQ(input.kind, EInputKind::Error);
@@ -74,7 +74,7 @@ TEST(input_parser, help_command) {
     REQUIRE_EQ(input.kind, EInputKind::Help);
 }
 
-TEST(input_parser, a_command_is_recognised_after_spaces) {
+TEST(input_parser, recognises_a_command_after_spaces) {
     const auto input = parseUserInput("   /quit  ", ELogLevel::Info);
 
     REQUIRE_EQ(input.kind, EInputKind::Quit);
@@ -87,21 +87,21 @@ TEST(input_parser, level_command_carries_the_new_level) {
     CHECK_EQ(input.level, ELogLevel::Debug);
 }
 
-TEST(input_parser, level_command_without_an_argument_is_an_error) {
+TEST(input_parser, level_command_needs_an_argument) {
     const auto input = parseUserInput("/level", ELogLevel::Info);
 
     REQUIRE_EQ(input.kind, EInputKind::Error);
     CHECK(!input.error.empty());
 }
 
-TEST(input_parser, level_command_with_an_unknown_level_is_an_error) {
+TEST(input_parser, level_command_rejects_an_unknown_level) {
     const auto input = parseUserInput("/level NOPE", ELogLevel::Info);
 
     REQUIRE_EQ(input.kind, EInputKind::Error);
     CHECK(input.error.find("NOPE") != std::string::npos);
 }
 
-TEST(input_parser, an_unknown_command_is_an_error) {
+TEST(input_parser, rejects_an_unknown_command) {
     const auto input = parseUserInput("/bogus", ELogLevel::Info);
 
     REQUIRE_EQ(input.kind, EInputKind::Error);

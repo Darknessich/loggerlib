@@ -41,7 +41,7 @@ namespace {
     };
 } // namespace
 
-TEST(logger_base, keeps_messages_at_or_above_the_threshold) {
+TEST(logger_base, writes_at_or_above_the_threshold) {
     RecordingLogger logger{ELogLevel::Warn};
 
     CHECK(logger.log(ELogLevel::Warn, "warn"));
@@ -112,7 +112,7 @@ TEST(logger_base, error_code_is_clear_on_success) {
     CHECK(!ec);
 }
 
-TEST(logger_base, error_code_comes_from_write_line_unchanged) {
+TEST(logger_base, passes_the_error_code_through) {
     RecordingLogger logger{ELogLevel::Debug};
     logger.writeResult = false;
     logger.writeError = std::make_error_code(std::errc::no_space_on_device);
@@ -122,7 +122,7 @@ TEST(logger_base, error_code_comes_from_write_line_unchanged) {
     CHECK(ec == std::errc::no_space_on_device);
 }
 
-TEST(logger_base, rejects_a_level_outside_the_enumeration) {
+TEST(logger_base, rejects_an_invalid_level) {
     RecordingLogger logger{ELogLevel::Debug};
 
     for (const ELogLevel level :

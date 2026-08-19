@@ -20,7 +20,6 @@ TEST(event_queue, keeps_the_fifo_order) {
 
     CHECK(queue.push({EEventKind::Write, ELogLevel::Info, "first"}));
     CHECK(queue.push({EEventKind::Write, ELogLevel::Warn, "second"}));
-    REQUIRE_EQ(queue.size(), std::size_t{2});
 
     SEvent message;
     REQUIRE(queue.pop(message));
@@ -62,10 +61,9 @@ TEST(event_queue, close_wakes_a_waiting_consumer) {
     consumer.join();
 
     CHECK(!result.load());
-    CHECK(queue.isClosed());
 }
 
-TEST(event_queue, close_keeps_what_was_already_accepted) {
+TEST(event_queue, close_keeps_accepted_events) {
     EventQueue queue;
 
     CHECK(queue.push({EEventKind::Write, ELogLevel::Info, "first"}));
@@ -82,12 +80,14 @@ TEST(event_queue, close_keeps_what_was_already_accepted) {
     CHECK(!queue.pop(message));
 }
 
-TEST(event_queue, push_into_a_closed_queue_is_refused) {
+TEST(event_queue, refuses_a_push_after_close) {
     EventQueue queue;
     queue.close();
 
     CHECK(!queue.push({EEventKind::Write, ELogLevel::Info, "too late"}));
-    CHECK_EQ(queue.size(), std::size_t{0});
+
+    SEvent event;
+    CHECK(!queue.pop(event));
 }
 
 TEST(event_queue, keeps_the_order_of_every_producer) {

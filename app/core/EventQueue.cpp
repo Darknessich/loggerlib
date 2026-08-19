@@ -30,14 +30,4 @@ namespace App {
         }
         m_cv.notify_all();
     }
-
-    bool EventQueue::isClosed() const {
-        const std::lock_guard lock(m_mutex);
-        return m_closed;
-    }
-
-    std::size_t EventQueue::size() const {
-        const std::lock_guard lock(m_mutex);
-        return m_queue.size();
-    }
 } // namespace App

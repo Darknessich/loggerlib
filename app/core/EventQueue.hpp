@@ -30,8 +30,6 @@ namespace App {
         [[nodiscard]] bool push(SEvent event);
         bool pop(SEvent& out);
         void close() noexcept;
-        [[nodiscard]] bool isClosed() const;
-        [[nodiscard]] std::size_t size() const;
 
     private:
         mutable std::mutex m_mutex;

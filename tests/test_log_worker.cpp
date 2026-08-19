@@ -77,7 +77,7 @@ TEST(log_worker, counts_failed_writes) {
     CHECK_EQ(logger.count(), kCount);
 }
 
-TEST(log_worker, does_not_count_a_filtered_message) {
+TEST(log_worker, skips_a_filtered_message) {
     RecordingLogger logger{ELogLevel::Warn};
     EventQueue queue;
     LogWorker worker{logger, queue};
@@ -92,7 +92,7 @@ TEST(log_worker, does_not_count_a_filtered_message) {
     CHECK_EQ(logger.count(), std::size_t{0});
 }
 
-TEST(log_worker, applies_a_level_event_in_queue_order) {
+TEST(log_worker, applies_a_level_event_in_order) {
     RecordingLogger logger{ELogLevel::Debug};
     EventQueue queue;
     LogWorker worker{logger, queue};
@@ -144,7 +144,7 @@ TEST(log_worker, last_error_follows_the_latest_failure) {
     CHECK_EQ(worker.lastError(), std::make_error_code(std::errc::broken_pipe).message());
 }
 
-TEST(log_worker, carries_an_error_from_a_foreign_category) {
+TEST(log_worker, carries_a_foreign_error_category) {
     RecordingLogger logger{ELogLevel::Debug};
     logger.failWrites(std::error_code{7, testCategory()});
 
@@ -159,7 +159,7 @@ TEST(log_worker, carries_an_error_from_a_foreign_category) {
     CHECK_EQ(worker.lastError(), "schema rejected the record (7)");
 }
 
-TEST(log_worker, survives_an_exception_from_the_logger) {
+TEST(log_worker, survives_a_throwing_logger) {
     RecordingLogger logger{ELogLevel::Debug};
     logger.throwOnWrite();
 
@@ -189,7 +189,7 @@ TEST(log_worker, stop_is_idempotent) {
     REQUIRE_EQ(logger.count(), std::size_t{1});
 }
 
-TEST(log_worker, a_worker_that_never_started_can_be_destroyed) {
+TEST(log_worker, unstarted_worker_closes_the_queue) {
     RecordingLogger logger{ELogLevel::Debug};
     EventQueue queue;
 
@@ -198,5 +198,5 @@ TEST(log_worker, a_worker_that_never_started_can_be_destroyed) {
         CHECK_EQ(worker.processed(), std::size_t{0});
     }
 
-    CHECK(queue.isClosed());
+    CHECK(!queue.push({EEventKind::Write, ELogLevel::Info, "after"}));
 }
