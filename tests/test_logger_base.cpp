@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -20,15 +21,18 @@ namespace {
 
         std::vector<std::string> lines;
         bool writeResult = true;
+        std::error_code writeError = std::make_error_code(std::errc::io_error);
 
         static std::chrono::system_clock::time_point fixedTime() {
             return std::chrono::system_clock::from_time_t(0);
         }
 
     protected:
-        bool writeLine(std::string_view line) override {
+        bool writeLine(std::string_view line, std::error_code& ec) override {
             lines.emplace_back(line);
-            return writeResult;
+            if (writeResult) return true;
+            ec = writeError;
+            return false;
         }
 
         [[nodiscard]] std::chrono::system_clock::time_point now() const noexcept override {
@@ -94,6 +98,40 @@ TEST(logger_base, propagates_write_failure) {
     logger.setLevel(ELogLevel::Fatal);
     CHECK(logger.log(ELogLevel::Info, "filtered"));
     CHECK_EQ(logger.lines.size(), std::size_t{1});
+}
+
+TEST(logger_base, error_code_is_clear_on_success) {
+    RecordingLogger logger{ELogLevel::Warn};
+
+    std::error_code ec = std::make_error_code(std::errc::io_error);
+    CHECK(logger.log(ELogLevel::Error, "written", ec));
+    CHECK(!ec);
+
+    ec = std::make_error_code(std::errc::io_error);
+    CHECK(logger.log(ELogLevel::Debug, "filtered", ec));
+    CHECK(!ec);
+}
+
+TEST(logger_base, error_code_comes_from_write_line_unchanged) {
+    RecordingLogger logger{ELogLevel::Debug};
+    logger.writeResult = false;
+    logger.writeError = std::make_error_code(std::errc::no_space_on_device);
+
+    std::error_code ec;
+    CHECK(!logger.log(ELogLevel::Info, "doomed", ec));
+    CHECK(ec == std::errc::no_space_on_device);
+}
+
+TEST(logger_base, rejects_a_level_outside_the_enumeration) {
+    RecordingLogger logger{ELogLevel::Debug};
+
+    for (const ELogLevel level : {ELogLevel::Count, static_cast<ELogLevel>(42)}) {
+        std::error_code ec;
+        CHECK(!logger.log(level, "garbage", ec));
+        CHECK(ec == std::errc::invalid_argument);
+    }
+
+    CHECK_EQ(logger.lines.size(), std::size_t{0});
 }
 
 TEST(logger_base, multiline_message_stays_one_line) {

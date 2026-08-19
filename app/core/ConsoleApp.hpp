@@ -5,7 +5,13 @@
 #include <iosfwd>
 
 namespace App {
-    enum class EExitCode { Success = 0, Usage = 1, LogUnavailable = 2, WriteFailed = 3 };
+    enum class EExitCode {
+        Success = 0,
+        Usage = 1,
+        LogUnavailable = 2,
+        WriteFailed = 3,
+        InternalError = 4
+    };
 
     class ConsoleApp {
     public:

@@ -42,7 +42,7 @@ namespace App {
         worker.start();
 
         bool running = true;
-        bool warned = false;
+        std::string reportedReason;
         std::string line;
 
         while (running) {
@@ -72,9 +72,10 @@ namespace App {
                     break;
             }
 
-            if (!warned && worker.failed() > 0) {
-                m_err << "log write failed, further failures are only counted\n";
-                warned = true;
+            std::string reason = worker.lastError();
+            if (!reason.empty() && reason != reportedReason) {
+                m_err << "log write failed: " << reason << '\n';
+                reportedReason = std::move(reason);
             }
         }
 
@@ -83,7 +84,12 @@ namespace App {
         worker.stop();
 
         const std::size_t failed = worker.failed();
-        m_err << "processed " << worker.processed() << " message(s), " << failed << " failed\n";
+        m_err << "processed " << worker.processed() << " message(s), " << failed << " failed";
+        if (failed > 0) {
+            const std::string reason = worker.lastError();
+            if (!reason.empty()) m_err << ": " << reason;
+        }
+        m_err << '\n';
         return failed > 0 ? EExitCode::WriteFailed : EExitCode::Success;
     }
 } // namespace App

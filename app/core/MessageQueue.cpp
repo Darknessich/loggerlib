@@ -31,12 +31,12 @@ namespace App {
         m_cv.notify_all();
     }
 
-    bool MessageQueue::isClosed() const noexcept {
+    bool MessageQueue::isClosed() const {
         const std::lock_guard lock(m_mutex);
         return m_closed;
     }
 
-    std::size_t MessageQueue::size() const noexcept {
+    std::size_t MessageQueue::size() const {
         const std::lock_guard lock(m_mutex);
         return m_queue.size();
     }

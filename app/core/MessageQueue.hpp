@@ -27,8 +27,8 @@ namespace App {
         [[nodiscard]] bool push(SMessage msg);
         bool pop(SMessage& out);
         void close() noexcept;
-        bool isClosed() const noexcept;
-        std::size_t size() const noexcept;
+        [[nodiscard]] bool isClosed() const;
+        [[nodiscard]] std::size_t size() const;
 
     private:
         mutable std::mutex m_mutex;

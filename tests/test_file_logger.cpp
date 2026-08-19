@@ -1,11 +1,13 @@
 #include <framework/TestFramework.hpp>
 #include <utils/TempFile.hpp>
 
+#include <FileLogger.hpp>
 #include <logger/LogLevel.hpp>
 #include <logger/LogRecord.hpp>
 #include <logger/LoggerFactory.hpp>
 
 #include <cstddef>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -105,6 +107,26 @@ TEST(file_logger, rejects_an_invalid_level) {
     }
 
     CHECK(!file.exists());
+}
+
+TEST(file_logger, reports_a_write_failure) {
+    Logger::FileLogger logger{std::ofstream{}, ELogLevel::Debug};
+
+    std::error_code ec;
+    CHECK(!logger.log(ELogLevel::Info, "nowhere", ec));
+    CHECK(static_cast<bool>(ec));
+}
+
+TEST(file_logger, leaves_the_error_code_clear_on_success) {
+    const TempFile file{"file_logger_clear_ec.log"};
+
+    std::error_code ec;
+    const auto logger = Logger::createFileLogger(file.path(), ELogLevel::Debug, ec);
+    REQUIRE(logger != nullptr);
+
+    std::error_code writeError = std::make_error_code(std::errc::io_error);
+    CHECK(logger->log(ELogLevel::Info, "ok", writeError));
+    CHECK(!writeError);
 }
 
 TEST(file_logger, serializes_concurrent_writes) {

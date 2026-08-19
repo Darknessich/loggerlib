@@ -10,7 +10,7 @@ namespace Logger {
         FileLogger(std::ofstream&& stream, ELogLevel level);
 
     protected:
-        bool writeLine(std::string_view line) override;
+        bool writeLine(std::string_view line, std::error_code& ec) override;
 
     private:
         std::ofstream m_fstream;

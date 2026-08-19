@@ -1,5 +1,9 @@
 #include "LogWorker.hpp"
 
+#include <exception>
+#include <system_error>
+#include <utility>
+
 namespace App {
     LogWorker::LogWorker(Logger::ILogger& logger, MessageQueue& queue) noexcept
         : m_logger{logger}, m_queue{queue} {}
@@ -26,13 +30,37 @@ namespace App {
         return m_failed.load(std::memory_order_relaxed);
     }
 
+    std::string LogWorker::lastError() const {
+        const std::lock_guard lock(m_errorMutex);
+        return m_lastError;
+    }
+
+    void LogWorker::recordFailure(std::string reason) {
+        m_failed.fetch_add(1, std::memory_order_relaxed);
+        const std::lock_guard lock(m_errorMutex);
+        m_lastError = std::move(reason);
+    }
+
     void LogWorker::loop() {
         SMessage message;
         while (m_queue.pop(message)) {
-            if (m_logger.log(message.level, message.message)) {
+            std::error_code ec;
+            bool written = false;
+
+            try {
+                written = m_logger.log(message.level, message.message, ec);
+            } catch (const std::exception& error) {
+                recordFailure(error.what());
+                continue;
+            } catch (...) {
+                recordFailure("unknown exception");
+                continue;
+            }
+
+            if (written) {
                 m_processed.fetch_add(1, std::memory_order_relaxed);
             } else {
-                m_failed.fetch_add(1, std::memory_order_relaxed);
+                recordFailure(ec ? ec.message() : "write failed");
             }
         }
     }

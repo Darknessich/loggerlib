@@ -8,11 +8,28 @@
 
 #include <cstddef>
 #include <string>
+#include <system_error>
 
 using App::LogWorker;
 using App::MessageQueue;
 using Logger::ELogLevel;
 using utils::RecordingLogger;
+
+namespace {
+    class TestCategory final : public std::error_category {
+    public:
+        [[nodiscard]] const char* name() const noexcept override { return "test"; }
+
+        [[nodiscard]] std::string message(int value) const override {
+            return "schema rejected the record (" + std::to_string(value) + ')';
+        }
+    };
+
+    const std::error_category& testCategory() {
+        static const TestCategory category;
+        return category;
+    }
+} // namespace
 
 TEST(log_worker, writes_everything_queued_before_stop) {
     constexpr std::size_t kCount = 100;
@@ -72,6 +89,69 @@ TEST(log_worker, counts_a_filtered_message_as_processed) {
     REQUIRE_EQ(worker.processed(), std::size_t{1});
     CHECK_EQ(worker.failed(), std::size_t{0});
     CHECK_EQ(logger.count(), std::size_t{0});
+}
+
+TEST(log_worker, last_error_is_empty_without_failures) {
+    RecordingLogger logger{ELogLevel::Debug};
+    MessageQueue queue;
+    LogWorker worker{logger, queue};
+
+    REQUIRE(queue.push({ELogLevel::Info, "fine"}));
+    worker.start();
+    worker.stop();
+
+    CHECK_EQ(worker.failed(), std::size_t{0});
+    CHECK(worker.lastError().empty());
+}
+
+TEST(log_worker, last_error_follows_the_latest_failure) {
+    RecordingLogger logger{ELogLevel::Debug};
+    logger.failWrites(
+        {std::make_error_code(std::errc::no_space_on_device),
+         std::make_error_code(std::errc::broken_pipe)}
+    );
+
+    MessageQueue queue;
+    LogWorker worker{logger, queue};
+    REQUIRE(queue.push({ELogLevel::Info, "first"}));
+    REQUIRE(queue.push({ELogLevel::Info, "second"}));
+
+    worker.start();
+    worker.stop();
+
+    REQUIRE_EQ(worker.failed(), std::size_t{2});
+    CHECK_EQ(worker.lastError(), std::make_error_code(std::errc::broken_pipe).message());
+}
+
+TEST(log_worker, carries_an_error_from_a_foreign_category) {
+    RecordingLogger logger{ELogLevel::Debug};
+    logger.failWrites(std::error_code{7, testCategory()});
+
+    MessageQueue queue;
+    LogWorker worker{logger, queue};
+    REQUIRE(queue.push({ELogLevel::Info, "rejected"}));
+
+    worker.start();
+    worker.stop();
+
+    REQUIRE_EQ(worker.failed(), std::size_t{1});
+    CHECK_EQ(worker.lastError(), "schema rejected the record (7)");
+}
+
+TEST(log_worker, survives_an_exception_from_the_logger) {
+    RecordingLogger logger{ELogLevel::Debug};
+    logger.throwOnWrite();
+
+    MessageQueue queue;
+    LogWorker worker{logger, queue};
+    REQUIRE(queue.push({ELogLevel::Info, "boom"}));
+
+    worker.start();
+    worker.stop();
+
+    REQUIRE_EQ(worker.failed(), std::size_t{1});
+    CHECK_EQ(worker.processed(), std::size_t{0});
+    CHECK(worker.lastError().find("exploded") != std::string::npos);
 }
 
 TEST(log_worker, stop_is_idempotent) {

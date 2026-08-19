@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 using App::EExitCode;
 using Logger::ELogLevel;
@@ -156,6 +157,19 @@ TEST(console_app, reports_write_failures) {
 
     REQUIRE_EQ(session.code, EExitCode::WriteFailed);
     CHECK(session.err.find("2 failed") != std::string::npos);
+}
+
+TEST(console_app, names_the_failure_reason) {
+    RecordingLogger logger{ELogLevel::Debug};
+    logger.failWrites(std::make_error_code(std::errc::no_space_on_device));
+
+    const auto session = run(logger, "doomed\n");
+    const std::string reason = std::make_error_code(std::errc::no_space_on_device).message();
+
+    REQUIRE_EQ(session.code, EExitCode::WriteFailed);
+    CHECK(session.err.find(reason) != std::string::npos);
+
+    CHECK(session.err.find("1 failed: " + reason) != std::string::npos);
 }
 
 TEST(console_app, prints_no_prompt_when_it_is_switched_off) {

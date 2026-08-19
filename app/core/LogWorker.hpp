@@ -6,6 +6,8 @@
 
 #include <atomic>
 #include <cstddef>
+#include <mutex>
+#include <string>
 #include <thread>
 
 namespace App {
@@ -23,13 +25,18 @@ namespace App {
         void stop();
         [[nodiscard]] std::size_t processed() const noexcept;
         [[nodiscard]] std::size_t failed() const noexcept;
+        [[nodiscard]] std::string lastError() const;
 
     private:
         void loop();
+        void recordFailure(std::string reason);
+
         Logger::ILogger& m_logger;
         MessageQueue& m_queue;
         std::thread m_thread;
         std::atomic<std::size_t> m_processed{0};
         std::atomic<std::size_t> m_failed{0};
+        mutable std::mutex m_errorMutex;
+        std::string m_lastError;
     };
 } // namespace App
