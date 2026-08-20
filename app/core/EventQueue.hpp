@@ -3,19 +3,22 @@
 #include <logger/LogLevel.hpp>
 
 #include <condition_variable>
-#include <cstddef>
 #include <mutex>
 #include <queue>
 #include <string>
+#include <variant>
 
 namespace App {
-    enum class EEventKind { Write, SetLevel };
-
-    struct SEvent {
-        EEventKind kind{EEventKind::Write};
+    struct SWrite {
         Logger::ELogLevel level{Logger::ELogLevel::Info};
         std::string message;
     };
+
+    struct SSetLevel {
+        Logger::ELogLevel level{Logger::ELogLevel::Info};
+    };
+
+    using TEvent = std::variant<SWrite, SSetLevel>;
 
     // close() refuses new events but keeps the queued ones
     class EventQueue {
@@ -28,14 +31,14 @@ namespace App {
         EventQueue(EventQueue&&) = delete;
         EventQueue& operator=(EventQueue&&) = delete;
 
-        [[nodiscard]] bool push(SEvent event);
-        bool pop(SEvent& out);
+        [[nodiscard]] bool push(TEvent event);
+        bool pop(TEvent& out);
         void close() noexcept;
 
     private:
         mutable std::mutex m_mutex;
         std::condition_variable m_cv;
-        std::queue<SEvent> m_queue;
+        std::queue<TEvent> m_queue;
         bool m_closed{false};
     };
 } // namespace App

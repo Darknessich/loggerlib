@@ -6,8 +6,7 @@
 #include <string_view>
 
 namespace App {
-    SOptions parseOptions(int argc, const char* const* argv) {
-        SOptions parsed;
+    TOptions parseOptions(int argc, const char* const* argv) {
         std::optional<std::string_view> pathText;
         std::optional<std::string_view> levelText;
 
@@ -22,15 +21,10 @@ namespace App {
                     continue;
                 }
 
-                if (argument == "--help" || argument == "-h") {
-                    parsed.kind = EOptionsKind::Help;
-                    return parsed;
-                }
+                if (argument == "--help" || argument == "-h") return SShowHelp{};
 
-                if (!argument.empty() && argument.front() == '-') {
-                    parsed.error = "unknown option: " + std::string{argument};
-                    return parsed;
-                }
+                if (!argument.empty() && argument.front() == '-')
+                    return SUsageError{"unknown option: " + std::string{argument}};
             }
 
             if (!pathText) {
@@ -38,32 +32,21 @@ namespace App {
             } else if (!levelText) {
                 levelText = argument;
             } else {
-                parsed.error = "unexpected argument: " + std::string{argument};
-                return parsed;
+                return SUsageError{"unexpected argument: " + std::string{argument}};
             }
         }
 
-        if (!pathText) {
-            parsed.error = "log file name is required";
-            return parsed;
-        }
-        if (pathText->empty()) {
-            parsed.error = "log file name must not be empty";
-            return parsed;
-        }
+        if (!pathText) return SUsageError{"log file name is required"};
+        if (pathText->empty()) return SUsageError{"log file name must not be empty"};
 
+        SRun run{std::string{*pathText}, Logger::ELogLevel::Info};
         if (levelText) {
             const auto level = Logger::string2level(*levelText);
-            if (!level) {
-                parsed.error = "unknown level: " + std::string{*levelText};
-                return parsed;
-            }
-            parsed.level = *level;
+            if (!level) return SUsageError{"unknown level: " + std::string{*levelText}};
+            run.level = *level;
         }
 
-        parsed.path = std::string{*pathText};
-        parsed.kind = EOptionsKind::Run;
-        return parsed;
+        return run;
     }
 
     void printUsage(const char* program, std::ostream& stream) {
@@ -76,7 +59,7 @@ namespace App {
                   "  <logfile>  file the log is appended to\n"
                   "  [level]    lowest level that reaches the log, one of ";
         printLevels(stream);
-        stream << " (default: " << Logger::level2string(SOptions{}.level)
+        stream << " (default: " << Logger::level2string(SRun{}.level)
                << ")\n"
                   "\n"
                   "Type /help inside the application for the list of commands.\n";

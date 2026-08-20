@@ -4,19 +4,24 @@
 
 #include <iosfwd>
 #include <string>
+#include <variant>
 
 namespace App {
-    enum class EOptionsKind { Run, Help, Error };
-
-    struct SOptions {
-        EOptionsKind kind{EOptionsKind::Error};
+    struct SRun {
         std::string path;
         Logger::ELogLevel level{Logger::ELogLevel::Info};
-        std::string error;
     };
 
+    struct SUsageError {
+        std::string text;
+    };
+
+    struct SShowHelp {};
+
+    using TOptions = std::variant<SRun, SShowHelp, SUsageError>;
+
     // A dash starts an option; "--" ends the options
-    SOptions parseOptions(int argc, const char* const* argv);
+    TOptions parseOptions(int argc, const char* const* argv);
     void printUsage(const char* program, std::ostream& stream);
     void printLevels(std::ostream& stream);
 } // namespace App

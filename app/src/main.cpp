@@ -1,42 +1,53 @@
 #include <core/ConsoleApp.hpp>
 #include <core/Options.hpp>
+#include <core/Overloaded.hpp>
 
 #include <logger/LoggerFactory.hpp>
 
 #include <exception>
 #include <iostream>
 #include <system_error>
+#include <variant>
 
 #include <unistd.h>
 
-int main(int argc, char** argv) {
-    try {
-        const char* const program = argc > 0 ? argv[0] : "logger_app";
-
-        const App::SOptions options = App::parseOptions(argc, argv);
-        switch (options.kind) {
-            case App::EOptionsKind::Help:
-                App::printUsage(program, std::cout);
-                return static_cast<int>(App::EExitCode::Success);
-            case App::EOptionsKind::Error:
-                std::cerr << options.error << '\n';
-                App::printUsage(program, std::cerr);
-                return static_cast<int>(App::EExitCode::Usage);
-            case App::EOptionsKind::Run:
-                break;
-        }
-
+namespace {
+    App::EExitCode runApplication(const App::SRun& options) {
         std::error_code ec;
         const auto logger = Logger::createFileLogger(options.path, options.level, ec);
         if (!logger) {
             std::cerr << "cannot open '" << options.path << "': " << ec.message() << '\n';
-            return static_cast<int>(App::EExitCode::LogUnavailable);
+            return App::EExitCode::LogUnavailable;
         }
 
         App::ConsoleApp application{
             *logger, std::cin, std::cout, std::cerr, ::isatty(STDIN_FILENO) != 0
         };
-        return static_cast<int>(application.run());
+        return application.run();
+    }
+} // namespace
+
+int main(int argc, char** argv) {
+    try {
+        const char* const program = argc > 0 ? argv[0] : "logger_app";
+
+        const App::EExitCode code = std::visit(
+            App::SOverloaded{
+                [](const App::SRun& options) { return runApplication(options); },
+                [program](const App::SShowHelp&) {
+                    App::printUsage(program, std::cout);
+                    return App::EExitCode::Success;
+                },
+                [program](const App::SUsageError& error) {
+                    std::cerr << error.text << '\n';
+                    App::printUsage(program, std::cerr);
+                    return App::EExitCode::Usage;
+                }
+            },
+            App::parseOptions(argc, argv)
+        );
+
+        return static_cast<int>(code);
     } catch (const std::exception& error) {
         std::cerr << "internal error: " << error.what() << '\n';
     } catch (...) {

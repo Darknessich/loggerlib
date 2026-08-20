@@ -3,7 +3,7 @@
 #include <utility>
 
 namespace App {
-    bool EventQueue::push(SEvent event) {
+    bool EventQueue::push(TEvent event) {
         {
             const std::lock_guard lock(m_mutex);
             if (m_closed) return false;
@@ -13,7 +13,7 @@ namespace App {
         return true;
     }
 
-    bool EventQueue::pop(SEvent& out) {
+    bool EventQueue::pop(TEvent& out) {
         std::unique_lock lock(m_mutex);
         m_cv.wait(lock, [this] { return m_closed || !m_queue.empty(); });
         if (m_queue.empty()) return false;

@@ -31,7 +31,7 @@ namespace App {
 
     private:
         void loop();
-        void write(const SEvent& event);
+        void write(const SWrite& event);
         void recordFailure(std::string reason);
 
         Logger::ILogger& m_logger;

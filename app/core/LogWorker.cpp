@@ -1,8 +1,11 @@
 #include "LogWorker.hpp"
 
+#include "Overloaded.hpp"
+
 #include <exception>
 #include <system_error>
 #include <utility>
+#include <variant>
 
 namespace App {
     LogWorker::LogWorker(Logger::ILogger& logger, EventQueue& queue) noexcept
@@ -43,7 +46,7 @@ namespace App {
         m_failed.fetch_add(1, std::memory_order_relaxed);
     }
 
-    void LogWorker::write(const SEvent& event) {
+    void LogWorker::write(const SWrite& event) {
         // Without this check a message dropped by the threshold counts as processed
         if (!m_logger.isEnabled(event.level)) return;
 
@@ -69,16 +72,15 @@ namespace App {
     }
 
     void LogWorker::loop() {
-        SEvent event;
+        TEvent event;
         while (m_queue.pop(event)) {
-            switch (event.kind) {
-                case EEventKind::Write:
-                    write(event);
-                    break;
-                case EEventKind::SetLevel:
-                    m_logger.setLevel(event.level);
-                    break;
-            }
+            std::visit(
+                SOverloaded{
+                    [this](const SWrite& write) { this->write(write); },
+                    [this](const SSetLevel& setLevel) { m_logger.setLevel(setLevel.level); }
+                },
+                event
+            );
         }
     }
 } // namespace App

@@ -18,49 +18,39 @@ namespace App {
                                                  : std::pair{line.substr(0, end), line.substr(end)};
         }
 
-        SUserInput parseCommand(std::string_view line, Logger::ELogLevel defaultLevel) {
+        TUserInput parseCommand(std::string_view line) {
             const auto [name, tail] = splitFirstWord(line);
 
-            if (name == "/quit") return {EInputKind::Quit, defaultLevel, {}, {}};
-            if (name == "/help") return {EInputKind::Help, defaultLevel, {}, {}};
+            if (name == "/quit") return SQuitCommand{};
+            if (name == "/help") return SHelpCommand{};
             if (name != "/level")
-                return {
-                    EInputKind::Error,
-                    defaultLevel,
-                    {},
-                    "unknown command: " + std::string{name} + " (type /help)"
-                };
+                return SError{"unknown command: " + std::string{name} + " (type /help)"};
 
             const std::string_view argument = trim(tail);
-            if (argument.empty())
-                return {EInputKind::Error, defaultLevel, {}, "usage: /level <name>"};
+            if (argument.empty()) return SError{"usage: /level <name>"};
 
             const auto level = Logger::string2level(argument);
-            if (!level)
-                return {
-                    EInputKind::Error, defaultLevel, {}, "unknown level: " + std::string{argument}
-                };
+            if (!level) return SError{"unknown level: " + std::string{argument}};
 
-            return {EInputKind::SetLevel, *level, {}, {}};
+            return SLevelCommand{*level};
         }
     } // namespace
 
-    SUserInput parseUserInput(std::string_view line, Logger::ELogLevel defaultLevel) {
+    TUserInput parseUserInput(std::string_view line, Logger::ELogLevel defaultLevel) {
         line = trim(line);
-        if (line.empty()) return {EInputKind::Empty, defaultLevel, {}, {}};
+        if (line.empty()) return SEmptyLine{};
 
         if (line.front() == '/')
             return line.size() > 1 && line[1] == '/'
-                       ? SUserInput{EInputKind::Message, defaultLevel, std::string{line.substr(1)}, {}}
-                       : parseCommand(line, defaultLevel);
+                       ? TUserInput{SMessage{defaultLevel, std::string{line.substr(1)}}}
+                       : parseCommand(line);
 
         const auto [word, tail] = splitFirstWord(line);
         const auto level = Logger::string2level(word);
-        if (!level) return {EInputKind::Message, defaultLevel, std::string{line}, {}};
+        if (!level) return SMessage{defaultLevel, std::string{line}};
 
         const std::string_view message = trim(tail);
-        return message.empty()
-                   ? SUserInput{EInputKind::Error, defaultLevel, {}, "message text is missing"}
-                   : SUserInput{EInputKind::Message, *level, std::string{message}, {}};
+        return message.empty() ? TUserInput{SError{"message text is missing"}}
+                               : TUserInput{SMessage{*level, std::string{message}}};
     }
 } // namespace App

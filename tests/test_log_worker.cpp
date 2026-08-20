@@ -10,9 +10,10 @@
 #include <string>
 #include <system_error>
 
-using App::EEventKind;
 using App::EventQueue;
 using App::LogWorker;
+using App::SSetLevel;
+using App::SWrite;
 using Logger::ELogLevel;
 using utils::RecordingLogger;
 
@@ -40,7 +41,7 @@ TEST(log_worker, writes_everything_queued_before_stop) {
     LogWorker worker{logger, queue};
 
     for (std::size_t i = 0; i < kCount; ++i) {
-        REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "message " + std::to_string(i)}));
+        REQUIRE(queue.push(SWrite{ELogLevel::Info, "message " + std::to_string(i)}));
     }
 
     worker.start();
@@ -66,7 +67,7 @@ TEST(log_worker, counts_failed_writes) {
     LogWorker worker{logger, queue};
 
     for (std::size_t i = 0; i < kCount; ++i) {
-        REQUIRE(queue.push({EEventKind::Write, ELogLevel::Error, "doomed"}));
+        REQUIRE(queue.push(SWrite{ELogLevel::Error, "doomed"}));
     }
 
     worker.start();
@@ -82,7 +83,7 @@ TEST(log_worker, skips_a_filtered_message) {
     EventQueue queue;
     LogWorker worker{logger, queue};
 
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Debug, "below the threshold"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Debug, "below the threshold"}));
 
     worker.start();
     worker.stop();
@@ -97,9 +98,9 @@ TEST(log_worker, applies_a_level_event_in_order) {
     EventQueue queue;
     LogWorker worker{logger, queue};
 
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "before"}));
-    REQUIRE(queue.push({EEventKind::SetLevel, ELogLevel::Error, {}}));
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "after"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "before"}));
+    REQUIRE(queue.push(SSetLevel{ELogLevel::Error}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "after"}));
 
     worker.start();
     worker.stop();
@@ -117,7 +118,7 @@ TEST(log_worker, last_error_is_empty_without_failures) {
     EventQueue queue;
     LogWorker worker{logger, queue};
 
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "fine"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "fine"}));
     worker.start();
     worker.stop();
 
@@ -134,8 +135,8 @@ TEST(log_worker, last_error_follows_the_latest_failure) {
 
     EventQueue queue;
     LogWorker worker{logger, queue};
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "first"}));
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "second"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "first"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "second"}));
 
     worker.start();
     worker.stop();
@@ -150,7 +151,7 @@ TEST(log_worker, carries_a_foreign_error_category) {
 
     EventQueue queue;
     LogWorker worker{logger, queue};
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "rejected"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "rejected"}));
 
     worker.start();
     worker.stop();
@@ -165,7 +166,7 @@ TEST(log_worker, survives_a_throwing_logger) {
 
     EventQueue queue;
     LogWorker worker{logger, queue};
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "boom"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "boom"}));
 
     worker.start();
     worker.stop();
@@ -180,7 +181,7 @@ TEST(log_worker, stop_is_idempotent) {
     EventQueue queue;
     LogWorker worker{logger, queue};
 
-    REQUIRE(queue.push({EEventKind::Write, ELogLevel::Info, "only one"}));
+    REQUIRE(queue.push(SWrite{ELogLevel::Info, "only one"}));
 
     worker.start();
     worker.stop();
@@ -198,5 +199,5 @@ TEST(log_worker, unstarted_worker_closes_the_queue) {
         CHECK_EQ(worker.processed(), std::size_t{0});
     }
 
-    CHECK(!queue.push({EEventKind::Write, ELogLevel::Info, "after"}));
+    CHECK(!queue.push(SWrite{ELogLevel::Info, "after"}));
 }

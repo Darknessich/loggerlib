@@ -4,17 +4,26 @@
 
 #include <string>
 #include <string_view>
+#include <variant>
 
 namespace App {
-    enum class EInputKind { Message, SetLevel, Quit, Help, Empty, Error };
-
-    struct SUserInput {
-        EInputKind kind{EInputKind::Empty};
+    struct SMessage {
         Logger::ELogLevel level{Logger::ELogLevel::Info};
-        std::string message;
-        std::string error;
+        std::string text;
     };
+    struct SLevelCommand {
+        Logger::ELogLevel level{Logger::ELogLevel::Info};
+    };
+    struct SError {
+        std::string text;
+    };
+    struct SQuitCommand {};
+    struct SHelpCommand {};
+    struct SEmptyLine {};
+
+    using TUserInput =
+        std::variant<SMessage, SLevelCommand, SQuitCommand, SHelpCommand, SEmptyLine, SError>;
 
     // Expects one line without its terminator
-    SUserInput parseUserInput(std::string_view line, Logger::ELogLevel defaultLevel);
+    TUserInput parseUserInput(std::string_view line, Logger::ELogLevel defaultLevel);
 } // namespace App

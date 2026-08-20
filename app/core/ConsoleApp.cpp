@@ -3,6 +3,7 @@
 #include "InputParser.hpp"
 #include "LogWorker.hpp"
 #include "Options.hpp"
+#include "Overloaded.hpp"
 
 #include <logger/LogLevel.hpp>
 
@@ -11,6 +12,7 @@
 #include <ostream>
 #include <string>
 #include <utility>
+#include <variant>
 
 namespace App {
     namespace {
@@ -51,29 +53,24 @@ namespace App {
             if (!std::getline(m_in, line)) break;
             if (!line.empty() && line.back() == '\r') line.pop_back();
 
-            SUserInput input = parseUserInput(line, level);
-            switch (input.kind) {
-                case EInputKind::Message:
-                    running =
-                        queue.push({EEventKind::Write, input.level, std::move(input.message)});
-                    break;
-                case EInputKind::SetLevel:
-                    level = input.level;
-                    running = queue.push({EEventKind::SetLevel, input.level, {}});
-                    m_out << "level: " << Logger::level2string(input.level) << '\n';
-                    break;
-                case EInputKind::Help:
-                    printHelp(m_out);
-                    break;
-                case EInputKind::Quit:
-                    running = false;
-                    break;
-                case EInputKind::Empty:
-                    break;
-                case EInputKind::Error:
-                    m_err << input.error << '\n';
-                    break;
-            }
+            TUserInput input = parseUserInput(line, level);
+            std::visit(
+                SOverloaded{
+                    [&](SMessage& message) {
+                        running = queue.push(SWrite{message.level, std::move(message.text)});
+                    },
+                    [&](const SLevelCommand& command) {
+                        level = command.level;
+                        running = queue.push(SSetLevel{command.level});
+                        m_out << "level: " << Logger::level2string(command.level) << '\n';
+                    },
+                    [&](const SHelpCommand&) { printHelp(m_out); },
+                    [&](const SQuitCommand&) { running = false; },
+                    [](const SEmptyLine&) {},
+                    [&](const SError& error) { m_err << error.text << '\n'; }
+                },
+                input
+            );
 
             std::string reason = worker.lastError();
             if (!reason.empty() && reason != reportedReason) {
