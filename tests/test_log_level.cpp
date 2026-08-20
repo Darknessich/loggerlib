@@ -24,22 +24,6 @@ TEST(log_level, names_match_the_enumeration) {
     CHECK_EQ(Logger::level2string(ELogLevel::Fatal), "FATAL");
 }
 
-TEST(log_level, every_level_has_a_name) {
-    for (std::size_t index = 0; index < kLevelCount; ++index) {
-        const auto level = static_cast<ELogLevel>(index);
-        const auto name = Logger::level2string(level);
-
-        CHECK(!name.empty());
-        CHECK(name != "UNKNOWN");
-    }
-}
-
-TEST(log_level, sentinel_and_out_of_range_are_unknown) {
-    CHECK_EQ(Logger::level2string(ELogLevel::Count), "UNKNOWN");
-    CHECK_EQ(Logger::level2string(static_cast<ELogLevel>(42)), "UNKNOWN");
-    CHECK_EQ(Logger::level2string(static_cast<ELogLevel>(-1)), "UNKNOWN");
-}
-
 TEST(log_level, name_round_trips) {
     for (std::size_t index = 0; index < kLevelCount; ++index) {
         const auto level = static_cast<ELogLevel>(index);

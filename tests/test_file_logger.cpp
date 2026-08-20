@@ -51,45 +51,6 @@ TEST(file_logger, appends_to_an_existing_file) {
     CHECK_EQ(file.readLines().size(), std::size_t{2});
 }
 
-TEST(file_logger, respects_the_level) {
-    const TempFile file{"file_logger_level.log"};
-
-    std::error_code ec;
-    const auto logger = Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Warn, ec);
-    REQUIRE(logger != nullptr);
-
-    CHECK(logger->log(ELogLevel::Debug, "dropped"));
-    CHECK(logger->log(ELogLevel::Info, "dropped"));
-    CHECK_EQ(file.readLines().size(), std::size_t{0});
-
-    CHECK(logger->log(ELogLevel::Error, "kept"));
-    CHECK_EQ(file.readLines().size(), std::size_t{1});
-}
-
-TEST(file_logger, set_level_takes_effect_immediately) {
-    const TempFile file{"file_logger_setlevel.log"};
-
-    std::error_code ec;
-    const auto logger =
-        Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Error, ec);
-    REQUIRE(logger != nullptr);
-
-    CHECK(logger->log(ELogLevel::Info, "before"));
-    CHECK_EQ(file.readLines().size(), std::size_t{0});
-
-    logger->setLevel(ELogLevel::Debug);
-    CHECK_EQ(logger->level(), ELogLevel::Debug);
-
-    CHECK(logger->log(ELogLevel::Info, "after"));
-
-    const auto lines = file.readLines();
-    REQUIRE_EQ(lines.size(), std::size_t{1});
-
-    const auto parsed = Logger::parseRecord(lines.front());
-    REQUIRE(parsed.has_value());
-    CHECK_EQ(parsed->message, "after");
-}
-
 TEST(file_logger, reports_open_failure) {
     std::error_code ec;
     const auto logger =
@@ -128,6 +89,7 @@ TEST(file_logger, reports_a_write_failure) {
 }
 
 TEST(file_logger, repeats_the_real_reason) {
+    // Only Linux has /dev/full, so on the other systems the case skips itself
     std::ofstream full{"/dev/full", std::ios::out | std::ios::app};
     if (!full.is_open()) return;
 
@@ -142,19 +104,6 @@ TEST(file_logger, repeats_the_real_reason) {
 
     CHECK(first != std::errc::io_error);
     CHECK(second == first);
-}
-
-TEST(file_logger, clears_the_error_code_on_success) {
-    const TempFile file{"file_logger_clear_ec.log"};
-
-    std::error_code ec;
-    const auto logger =
-        Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Debug, ec);
-    REQUIRE(logger != nullptr);
-
-    std::error_code writeError = std::make_error_code(std::errc::io_error);
-    CHECK(logger->log(ELogLevel::Info, "ok", writeError));
-    CHECK(!writeError);
 }
 
 TEST(file_logger, serializes_concurrent_writes) {

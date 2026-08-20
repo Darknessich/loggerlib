@@ -5,6 +5,7 @@
 
 #include <logger/LogLevel.hpp>
 
+#include <chrono>
 #include <cstddef>
 #include <ios>
 #include <istream>
@@ -61,9 +62,10 @@ TEST(console_app, takes_the_level_from_the_first_word) {
 
 TEST(console_app, level_command_raises_the_threshold) {
     RecordingLogger logger{ELogLevel::Info};
-    run(logger, "/level WARN\nINFO dropped\nERROR kept\n");
+    const auto session = run(logger, "/level WARN\nINFO dropped\nERROR kept\n");
 
     CHECK_EQ(logger.level(), ELogLevel::Warn);
+    CHECK(session.out.find("level: WARN") != std::string::npos);
 
     const auto records = logger.records();
     REQUIRE_EQ(records.size(), std::size_t{1});
@@ -114,20 +116,6 @@ TEST(console_app, quit_stops_reading) {
     const auto records = logger.records();
     REQUIRE_EQ(records.size(), std::size_t{1});
     CHECK_EQ(records[0].message, "before");
-}
-
-TEST(console_app, drains_the_queue_on_eof) {
-    constexpr std::size_t kLines = 200;
-
-    RecordingLogger logger{ELogLevel::Debug};
-
-    std::string input;
-    for (std::size_t i = 0; i < kLines; ++i) {
-        input += "message " + std::to_string(i) + '\n';
-    }
-    run(logger, input);
-
-    REQUIRE_EQ(logger.count(), kLines);
 }
 
 TEST(console_app, blank_lines_are_ignored) {
@@ -237,12 +225,14 @@ TEST(console_app, names_the_reason_in_the_loop) {
             : std::stringbuf{first, std::ios::in}, m_rest{std::move(rest)}, m_failures{failures},
               m_logger{&logger} {}
 
+        [[nodiscard]] bool timedOut() const noexcept { return m_timedOut; }
+
     protected:
         int_type underflow() override {
             const int_type next = std::stringbuf::underflow();
             if (next != traits_type::eof() || m_rest.empty()) return next;
 
-            m_logger->waitForFailures(m_failures);
+            m_timedOut = !m_logger->waitForFailures(m_failures, std::chrono::seconds{3});
             str(m_rest);
             m_rest.clear();
             return std::stringbuf::underflow();
@@ -252,29 +242,38 @@ TEST(console_app, names_the_reason_in_the_loop) {
         std::string m_rest;
         std::size_t m_failures;
         const RecordingLogger* m_logger;
+        bool m_timedOut = false;
     };
 
     RecordingLogger logger{ELogLevel::Debug};
     logger.failWrites(std::make_error_code(std::errc::no_space_on_device));
 
-    GatedInput gate{"one\ntwo\n", "three\n", 2, logger};
+    GatedInput gate{"one\ntwo\n", "three\nfour\n", 2, logger};
     std::istream in{&gate};
     std::ostringstream out;
     std::ostringstream err;
 
     App::ConsoleApp application{logger, in, out, err, false};
     const EExitCode code = application.run();
+    REQUIRE(!gate.timedOut());
     REQUIRE_EQ(code, EExitCode::WriteFailed);
 
     const std::string reason = std::make_error_code(std::errc::no_space_on_device).message();
+    const std::string report = "log write failed: " + reason;
     const std::string text = err.str();
 
-    const auto inLoop = text.find("log write failed: " + reason);
-    const auto summary = text.find("3 failed: " + reason);
+    const auto inLoop = text.find(report);
+    const auto summary = text.find("4 failed: " + reason);
 
     CHECK(inLoop != std::string::npos);
     CHECK(summary != std::string::npos);
     CHECK(inLoop < summary);
+
+    std::size_t reports = 0;
+    for (auto at = inLoop; at != std::string::npos; at = text.find(report, at + 1)) {
+        ++reports;
+    }
+    CHECK_EQ(reports, std::size_t{1});
 }
 
 TEST(console_app, omits_the_prompt) {

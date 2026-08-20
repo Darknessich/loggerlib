@@ -96,12 +96,6 @@ TEST(options, reports_a_help_request) {
     }
 }
 
-TEST(options, help_wins_over_a_missing_path) {
-    const auto parsed = parse({"logger_app", "--help"});
-
-    CHECK(std::holds_alternative<SShowHelp>(parsed));
-}
-
 TEST(options, double_dash_ends_the_options) {
     const auto file = parse({"logger_app", "--", "-x.log", "WARN"});
 

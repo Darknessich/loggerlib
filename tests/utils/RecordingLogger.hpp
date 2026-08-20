@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
@@ -42,9 +43,12 @@ namespace utils {
             return false;
         }
 
-        void waitForFailures(std::size_t count) const {
+        [[nodiscard]] bool
+        waitForFailures(std::size_t count, std::chrono::milliseconds timeout) const {
             std::unique_lock lock(m_mutex);
-            m_failureAdded.wait(lock, [this, count] { return m_failures >= count; });
+            return m_failureAdded.wait_for(lock, timeout, [this, count] {
+                return m_failures >= count;
+            });
         }
 
         void setLevel(Logger::ELogLevel level) noexcept override {

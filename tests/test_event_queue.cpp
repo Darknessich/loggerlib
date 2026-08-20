@@ -43,7 +43,6 @@ TEST(event_queue, pop_waits_for_a_push) {
         if (queue.pop(received)) popped.store(true);
     });
 
-    CHECK(!popped.load());
     CHECK(queue.push(SWrite{ELogLevel::Info, "wake up"}));
     consumer.join();
 

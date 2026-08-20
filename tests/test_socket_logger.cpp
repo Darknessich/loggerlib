@@ -215,7 +215,7 @@ TEST(socket_logger, a_file_and_a_socket_get_the_same_record) {
     CHECK_EQ(onTheWire.front(), inTheFile.front());
 }
 
-TEST(socket_logger, a_failing_target_fails_the_write) {
+TEST(socket_logger, a_failing_target_fails_creation) {
     const TempFile file{"socket_logger_partial.log"};
 
     LoopbackServer server{ESocketProtocol::Tcp};

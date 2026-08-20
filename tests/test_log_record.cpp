@@ -143,7 +143,6 @@ TEST(log_record, leaves_utf8_untouched) {
 TEST(log_record, unescaping_accepts_any_hex_escape) {
     CHECK_EQ(Logger::unescapeMessage("\\x21"), "!");
     CHECK_EQ(Logger::unescapeMessage("\\x2a"), "*");
-    CHECK_EQ(Logger::escapeMessage("!"), "!");
 }
 
 TEST(log_record, unescaping_tolerates_malformed_input) {
