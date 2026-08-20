@@ -15,5 +15,6 @@ namespace App {
         std::string error;
     };
 
+    // Expects one line without its terminator
     SUserInput parseUserInput(std::string_view line, Logger::ELogLevel defaultLevel);
 } // namespace App

@@ -44,11 +44,13 @@ namespace App {
     }
 
     void LogWorker::write(const SEvent& event) {
+        // Without this check a message dropped by the threshold counts as processed
         if (!m_logger.isEnabled(event.level)) return;
 
         std::error_code ec;
         bool written = false;
 
+        // An exception leaving a thread function is std::terminate
         try {
             written = m_logger.log(event.level, event.message, ec);
         } catch (const std::exception& error) {

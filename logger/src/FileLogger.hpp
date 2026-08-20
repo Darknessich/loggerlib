@@ -5,6 +5,7 @@
 #include <fstream>
 
 namespace Logger {
+    // Flushes every record
     class FileLogger final : public LoggerBase {
     public:
         FileLogger(std::ofstream&& stream, ELogLevel level);

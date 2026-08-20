@@ -17,6 +17,7 @@ namespace App {
         std::string message;
     };
 
+    // close() refuses new events but keeps the queued ones
     class EventQueue {
     public:
         EventQueue() = default;

@@ -7,6 +7,8 @@
 #include <type_traits>
 #include <vector>
 
+// TEST(suite, name) registers a case, CHECK reports and continues, REQUIRE returns from the
+// case. The binary takes --suite, --filter, --list and --help.
 namespace tf {
     namespace detail {
         template <typename T> std::string toText(const T& value) {

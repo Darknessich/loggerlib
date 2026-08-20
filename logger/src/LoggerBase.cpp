@@ -15,7 +15,9 @@ namespace Logger {
             return false;
         }
 
+        // Dropped by the threshold is a success with a clean ec, not a failure
         if (!isEnabled(level)) return true;
+
         const std::string line = formatRecord(now(), level, message);
         const std::lock_guard lock(m_mutex);
         return writeLine(line, ec);

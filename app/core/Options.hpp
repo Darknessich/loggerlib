@@ -15,6 +15,7 @@ namespace App {
         std::string error;
     };
 
+    // A dash starts an option; "--" ends the options
     SOptions parseOptions(int argc, const char* const* argv);
     void printUsage(const char* program, std::ostream& stream);
     void printLevels(std::ostream& stream);

@@ -30,6 +30,7 @@ namespace Logger {
 
         static_assert(isTableOrdered(), "kLevelNames must be ordered by enum value");
 
+        // Not std::tolower, e.g. in a Turkish locale 'I' maps to a dotless 'ı'
         char toLowerCase(char c) noexcept {
             return 'A' <= c && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
         }

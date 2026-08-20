@@ -11,6 +11,7 @@
 #include <thread>
 
 namespace App {
+    // The only user of the logger. stop() returns once the queue is drained.
     class LogWorker {
     public:
         LogWorker(Logger::ILogger& logger, EventQueue& queue) noexcept;
@@ -23,6 +24,7 @@ namespace App {
 
         void start();
         void stop();
+
         [[nodiscard]] std::size_t processed() const noexcept;
         [[nodiscard]] std::size_t failed() const noexcept;
         [[nodiscard]] std::string lastError() const;

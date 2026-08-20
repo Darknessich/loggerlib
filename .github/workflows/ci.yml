@@ -55,6 +55,18 @@ jobs:
           run-clang-tidy -p build -quiet -warnings-as-errors='*'
           $(git ls-files '*.cpp')
 
+  docs:
+    name: docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install doxygen
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq doxygen
+      - name: Configure
+        run: cmake -S . -B build -DLOGGER_BUILD_DOCS=ON
+      - name: Generate documentation
+        run: cmake --build build --target docs
+
   sanitizers:
     name: sanitizer=${{ matrix.sanitizer }}
     runs-on: ubuntu-latest

@@ -237,6 +237,7 @@ TEST(log_record, accepted_stamp_round_trips) {
          {"1970-01-01 00:00:00.000Z [INFO] x",
           "2001-09-09 01:46:40.123Z [WARN] hello",
           "2100-06-15 12:30:45.678Z [DEBUG] mid",
+          // The last second a nanosecond system_clock can hold
           "2262-04-11 23:47:15.000Z [INFO] x"}) {
         const auto parsed = Logger::parseRecord(line);
         REQUIRE(parsed.has_value());

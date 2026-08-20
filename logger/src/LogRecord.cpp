@@ -18,6 +18,7 @@ namespace {
         return result.ec == std::errc{} && result.ptr == last;
     }
 
+    // Not std::isdigit: undefined on a negative char, and locale-dependent
     constexpr bool isDigit(char c) noexcept {
         return '0' <= c && c <= '9';
     }

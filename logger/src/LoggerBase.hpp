@@ -9,6 +9,7 @@
 #include <string_view>
 
 namespace Logger {
+    // Threshold, filtering, timestamp and serialisation of writers
     class LoggerBase : public ILogger {
     public:
         using ILogger::log;
@@ -23,6 +24,7 @@ namespace Logger {
 
         [[nodiscard]] virtual bool writeLine(std::string_view line, std::error_code& ec) = 0;
 
+        // Virtual for fixed time in tests
         [[nodiscard]] virtual std::chrono::system_clock::time_point now() const noexcept;
 
     private:

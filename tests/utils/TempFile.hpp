@@ -4,6 +4,7 @@
 #include <vector>
 
 namespace utils {
+    // Removed on construction and on destruction
     class TempFile {
     public:
         explicit TempFile(std::string name);
