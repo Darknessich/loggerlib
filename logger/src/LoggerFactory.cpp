@@ -1,29 +1,61 @@
 #include <logger/LoggerFactory.hpp>
 
-#include "FileLogger.hpp"
+#include "FileSink.hpp"
+#include "MultiSink.hpp"
+#include "Overloaded.hpp"
+#include "SinkLogger.hpp"
+#include "net/TcpSink.hpp"
+#include "net/UdpSink.hpp"
 
-#include <cerrno>
-#include <fstream>
 #include <utility>
 
 namespace Logger {
+    namespace {
+        std::unique_ptr<ISink> openSink(const TTarget& target, std::error_code& ec) {
+            return std::visit(
+                SOverloaded{
+                    [&](const SFileTarget& file) { return openFileSink(file.path, ec); },
+                    [&](const SSocketTarget& socket) -> std::unique_ptr<ISink> {
+                        switch (socket.protocol) {
+                            case ESocketProtocol::Tcp:
+                                return openTcpSink(socket.host, socket.port, STcpSettings{}, ec);
+                            case ESocketProtocol::Udp:
+                                return openUdpSink(socket.host, socket.port, ec);
+                            case ESocketProtocol::Count:
+                                break;
+                        }
+                        ec = std::make_error_code(std::errc::invalid_argument);
+                        return nullptr;
+                    }
+                },
+                target
+            );
+        }
+    } // namespace
+
     std::unique_ptr<ILogger>
-    createFileLogger(const std::string& path, ELogLevel level, std::error_code& ec) {
+    createLogger(const std::vector<TTarget>& targets, ELogLevel level, std::error_code& ec) {
         ec.clear();
 
-        if (!isValidLevel(level)) {
+        if (targets.empty() || !isValidLevel(level)) {
             ec = std::make_error_code(std::errc::invalid_argument);
             return nullptr;
         }
 
-        errno = 0;
-        std::ofstream stream{path, std::ios::out | std::ios::app};
-        if (!stream.is_open()) {
-            ec = errno != 0 ? std::error_code{errno, std::generic_category()}
-                            : std::make_error_code(std::errc::io_error);
-            return nullptr;
+        std::vector<std::unique_ptr<ISink>> sinks;
+        sinks.reserve(targets.size());
+        for (const auto& target : targets) {
+            auto sink = openSink(target, ec);
+            if (!sink) return nullptr;
+            sinks.emplace_back(std::move(sink));
         }
 
-        return std::make_unique<FileLogger>(std::move(stream), level);
+        auto sink = sinks.size() == 1 ? std::move(sinks.front())
+                                      : std::make_unique<MultiSink>(std::move(sinks));
+        return std::make_unique<SinkLogger>(std::move(sink), level);
+    }
+
+    std::unique_ptr<ILogger> createLogger(TTarget target, ELogLevel level, std::error_code& ec) {
+        return createLogger(std::vector<TTarget>{std::move(target)}, level, ec);
     }
 } // namespace Logger

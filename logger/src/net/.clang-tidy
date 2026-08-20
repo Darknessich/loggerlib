@@ -1,0 +1,5 @@
+InheritParentConfig: true
+
+# The POSIX socket API is built around casting sockaddr_storage to sockaddr
+Checks: >
+  -cppcoreguidelines-pro-type-reinterpret-cast

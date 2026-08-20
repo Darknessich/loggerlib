@@ -1,7 +1,8 @@
 set(LOGGER_TEST_FRAMEWORK
     framework/TestFramework.cpp
     framework/main.cpp
-    utils/TempFile.cpp)
+    utils/TempFile.cpp
+    utils/LoopbackServer.cpp)
 
 function(logger_add_tests target library)
     add_executable(${target} ${LOGGER_TEST_FRAMEWORK} ${ARGN})
@@ -23,8 +24,8 @@ function(logger_add_tests target library)
 endfunction()
 
 logger_add_tests(logger_tests logger_static
-    test_log_level.cpp test_log_record.cpp
-    test_logger_base.cpp test_file_logger.cpp)
+    test_log_level.cpp test_log_record.cpp test_socket_protocol.cpp
+    test_sink_logger.cpp test_file_logger.cpp test_socket_logger.cpp)
 
 if(TARGET app_core)
     logger_add_tests(app_tests app_core

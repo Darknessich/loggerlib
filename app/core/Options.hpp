@@ -1,14 +1,16 @@
 #pragma once
 
 #include <logger/LogLevel.hpp>
+#include <logger/LoggerFactory.hpp>
 
 #include <iosfwd>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace App {
     struct SRun {
-        std::string path;
+        std::vector<Logger::TTarget> targets;
         Logger::ELogLevel level{Logger::ELogLevel::Info};
     };
 
@@ -20,7 +22,7 @@ namespace App {
 
     using TOptions = std::variant<SRun, SShowHelp, SUsageError>;
 
-    // A dash starts an option; "--" ends the options
+    // A dash starts an option; "--" ends the options. Targets keep the order they were given in.
     TOptions parseOptions(int argc, const char* const* argv);
     void printUsage(const char* program, std::ostream& stream);
     void printLevels(std::ostream& stream);

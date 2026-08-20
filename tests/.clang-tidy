@@ -10,6 +10,7 @@ Checks: >
   -google-readability-avoid-underscore-in-googletest-name,
   -misc-non-private-member-variables-in-classes,
   -misc-use-anonymous-namespace,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
   -readability-function-cognitive-complexity,
   -bugprone-unchecked-optional-access
 

@@ -1,52 +1,163 @@
 #include "Options.hpp"
 
+#include <charconv>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <ostream>
 #include <string_view>
+#include <utility>
 
 namespace App {
-    TOptions parseOptions(int argc, const char* const* argv) {
-        std::optional<std::string_view> pathText;
-        std::optional<std::string_view> levelText;
+    namespace {
+        struct SEndpointText {
+            std::string_view host;
+            std::string_view port;
+        };
 
+        std::optional<SEndpointText> splitEndpoint(std::string_view text) {
+            if (!text.empty() && text.front() == '[') {
+                const auto close = text.find("]:");
+                if (close == std::string_view::npos) return std::nullopt;
+                return SEndpointText{text.substr(1, close - 1), text.substr(close + 2)};
+            }
+
+            const auto colon = text.rfind(':');
+            if (colon == std::string_view::npos) return std::nullopt;
+
+            const std::string_view host = text.substr(0, colon);
+            if (host.find(':') != std::string_view::npos) return std::nullopt;
+
+            return SEndpointText{host, text.substr(colon + 1)};
+        }
+
+        std::optional<std::uint16_t> parsePort(std::string_view text) {
+            const char* const first = text.data();
+            const char* const last = first + text.size();
+
+            std::uint16_t port = 0;
+            const auto result = std::from_chars(first, last, port);
+            if (result.ec != std::errc{} || result.ptr != last || port == 0) return std::nullopt;
+            return port;
+        }
+
+        struct SScan {
+            std::vector<Logger::TTarget> targets;
+            std::optional<std::size_t> lastSocket; // --proto applies to this target
+            std::optional<std::string_view> levelText;
+            bool protocolGiven = false;
+            bool pathTaken = false;
+        };
+
+        std::optional<SUsageError> addFile(std::string_view path, SScan& scan) {
+            if (path.empty()) return SUsageError{"log file name must not be empty"};
+
+            scan.targets.emplace_back(Logger::SFileTarget{std::string{path}});
+            return std::nullopt;
+        }
+
+        std::optional<SUsageError> addSocket(std::string_view text, SScan& scan) {
+            const auto parts = splitEndpoint(text);
+            if (!parts)
+                return SUsageError{
+                    "expected <host:port>, got: " + std::string{text} +
+                    " (an IPv6 address needs brackets)"
+                };
+
+            if (parts->host.empty()) return SUsageError{"host must not be empty"};
+
+            const auto port = parsePort(parts->port);
+            if (!port) return SUsageError{"bad port: " + std::string{parts->port}};
+
+            scan.lastSocket = scan.targets.size();
+            scan.protocolGiven = false;
+            scan.targets.emplace_back(Logger::SSocketTarget{std::string{parts->host}, *port, {}});
+            return std::nullopt;
+        }
+
+        std::optional<SUsageError> setProtocol(std::string_view text, SScan& scan) {
+            if (!scan.lastSocket) return SUsageError{"--proto requires a preceding --socket"};
+            if (scan.protocolGiven) return SUsageError{"--proto given twice for one --socket"};
+
+            const auto protocol = Logger::string2protocol(text);
+            if (!protocol) return SUsageError{"unknown protocol: " + std::string{text}};
+
+            std::get<Logger::SSocketTarget>(scan.targets[*scan.lastSocket]).protocol = *protocol;
+            scan.protocolGiven = true;
+            return std::nullopt;
+        }
+
+        std::optional<SUsageError> setLevel(std::string_view text, SScan& scan) {
+            if (scan.levelText) return SUsageError{"level given twice: " + std::string{text}};
+
+            scan.levelText = text;
+            return std::nullopt;
+        }
+
+        using THandler = std::optional<SUsageError> (*)(std::string_view, SScan&);
+
+        std::optional<THandler> handlerFor(std::string_view argument) {
+            if (argument == "--file") return &addFile;
+            if (argument == "--socket") return &addSocket;
+            if (argument == "--proto") return &setProtocol;
+            if (argument == "--level") return &setLevel;
+            return std::nullopt;
+        }
+
+        void printProtocols(std::ostream& stream) {
+            for (std::size_t i = 0; i < static_cast<std::size_t>(Logger::ESocketProtocol::Count);
+                 ++i) {
+                if (i > 0) stream << ", ";
+                stream << Logger::protocol2string(static_cast<Logger::ESocketProtocol>(i));
+            }
+        }
+
+        TOptions buildRun(SScan scan) {
+            if (scan.targets.empty()) return SUsageError{"a log file or --socket is required"};
+
+            SRun run;
+            run.targets = std::move(scan.targets);
+            if (!scan.levelText) return run;
+
+            const auto level = Logger::string2level(*scan.levelText);
+            if (!level) return SUsageError{"unknown level: " + std::string{*scan.levelText}};
+
+            run.level = *level;
+            return run;
+        }
+    } // namespace
+
+    TOptions parseOptions(int argc, const char* const* argv) {
+        SScan scan;
         bool optionsEnded = false;
 
         for (int index = 1; index < argc; ++index) {
             const std::string_view argument{argv[index]};
 
-            if (!optionsEnded) {
-                if (argument == "--") {
-                    optionsEnded = true;
-                    continue;
-                }
-
-                if (argument == "--help" || argument == "-h") return SShowHelp{};
-
-                if (!argument.empty() && argument.front() == '-')
-                    return SUsageError{"unknown option: " + std::string{argument}};
+            if (!optionsEnded && argument == "--") {
+                optionsEnded = true;
+                continue;
             }
 
-            if (!pathText) {
-                pathText = argument;
-            } else if (!levelText) {
-                levelText = argument;
-            } else {
-                return SUsageError{"unexpected argument: " + std::string{argument}};
+            if (optionsEnded || argument.empty() || argument.front() != '-') {
+                const auto error =
+                    scan.pathTaken ? setLevel(argument, scan) : addFile(argument, scan);
+                scan.pathTaken = true;
+                if (error) return *error;
+                continue;
             }
+
+            if (argument == "--help" || argument == "-h") return SShowHelp{};
+
+            const auto handler = handlerFor(argument);
+            if (!handler) return SUsageError{"unknown option: " + std::string{argument}};
+
+            if (index + 1 >= argc) return SUsageError{"missing value for " + std::string{argument}};
+
+            if (const auto error = (*handler)(argv[++index], scan)) return *error;
         }
 
-        if (!pathText) return SUsageError{"log file name is required"};
-        if (pathText->empty()) return SUsageError{"log file name must not be empty"};
-
-        SRun run{std::string{*pathText}, Logger::ELogLevel::Info};
-        if (levelText) {
-            const auto level = Logger::string2level(*levelText);
-            if (!level) return SUsageError{"unknown level: " + std::string{*levelText}};
-            run.level = *level;
-        }
-
-        return run;
+        return buildRun(std::move(scan));
     }
 
     void printUsage(const char* program, std::ostream& stream) {
@@ -54,13 +165,23 @@ namespace App {
                << " [--] <logfile> [level]\n"
                   "       "
                << program
+               << " [--file <path>] [--socket <host:port> [--proto tcp|udp]] [--level <name>]\n"
+                  "       "
+               << program
                << " --help\n"
                   "\n"
                   "  <logfile>  file the log is appended to\n"
-                  "  [level]    lowest level that reaches the log, one of ";
+                  "  --file     another log file; may be given several times\n"
+                  "  --socket   receiver the log is sent to; may be given several times\n"
+                  "  --proto    transport of the preceding --socket, one of ";
+        printProtocols(stream);
+        stream << " (default: " << Logger::protocol2string(Logger::SSocketTarget{}.protocol)
+               << ")\n"
+                  "  --level    lowest level that reaches the log, one of ";
         printLevels(stream);
         stream << " (default: " << Logger::level2string(SRun{}.level)
                << ")\n"
+                  "  [level]    same as --level\n"
                   "\n"
                   "Type /help inside the application for the list of commands.\n";
     }

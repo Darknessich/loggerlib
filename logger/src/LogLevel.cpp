@@ -1,5 +1,7 @@
 #include <logger/LogLevel.hpp>
 
+#include "Text.hpp"
+
 #include <array>
 #include <cstddef>
 
@@ -30,21 +32,6 @@ namespace Logger {
 
         static_assert(isTableOrdered(), "kLevelNames must be ordered by enum value");
 
-        // Not std::tolower, e.g. in a Turkish locale 'I' maps to a dotless 'ı'
-        char toLowerCase(char c) noexcept {
-            return 'A' <= c && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
-        }
-
-        bool equalsIgnoreCase(std::string_view lhs, std::string_view rhs) noexcept {
-            if (lhs.size() != rhs.size()) return false;
-
-            for (std::size_t i = 0; i < lhs.size(); ++i) {
-                if (toLowerCase(lhs[i]) != toLowerCase(rhs[i])) {
-                    return false;
-                }
-            }
-            return true;
-        }
     } // namespace
 
     std::string_view level2string(ELogLevel level) noexcept {

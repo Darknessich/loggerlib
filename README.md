@@ -10,29 +10,31 @@
 
 ```
 logger/
-├── include/logger/     публичные заголовки: ILogger, LogLevel, LogRecord, LoggerFactory
-└── src/                реализация: LoggerBase, FileLogger, фабрика, формат записи
+├── include/logger/     публичные заголовки: ILogger, LogLevel, LogRecord, SocketProtocol,
+│                       LoggerFactory
+└── src/                реализация: SinkLogger, ISink (File\Multi), фабрика, формат записи
+    └── net/            только POSIX-сокеты: дескриптор, разрешение имён, TCP и UDP
 app/
 ├── core/               логика приложения отдельной библиотекой: Options, InputParser,
 │                       EventQueue, LogWorker, ConsoleApp
 └── src/main.cpp        разбор аргументов, создание логера, запуск
 tests/
 ├── framework/          фреймворк: TEST/CHECK/REQUIRE, отбор по сьютам
-├── utils/              общее для тестов: TempFile, RecordingLogger
+├── utils/              общее для тестов: TempFile, RecordingLogger, LoopbackServer
 ├── smoke/              работа через динамическую библиотеку
 └── test_*.cpp          по файлу на компонент
 collector/              заготовка под часть 3, сейчас пустая (LOGGER_BUILD_COLLECTOR=OFF)
 cmake/                  общие функции сборки
 ```
 
-Тестов 121 в 10 целях CTest.
+Тестов 153 в 12 целях CTest.
 
 ### Состояние по ТЗ
 
 | Часть | Что требуется | Состояние |
 |---|---|---|
 | 1 | библиотека, журнал в файл, два варианта сборки | сделано |
-| 1.5 (доп.) | запись журнала в сокет | не начата |
+| 1.5 (доп.) | запись журнала в сокет | сделано |
 | 2 | многопоточное консольное приложение | сделано |
 | 3 (доп.) | сбор статистики из сокета | не начата |
 
@@ -92,12 +94,20 @@ cmake --build build --target docs      # build/docs/html/index.html
 
 ```
 logger_app [--] <logfile> [level]
+logger_app [--file <path>] [--socket <host:port> [--proto tcp|udp]] [--level <name>]
 logger_app --help
 ```
 
-`<logfile>` — файл, в который дописывается журнал. `[level]` — начальный порог, одно из
-`DEBUG, INFO, WARN, ERROR, FATAL` (регистр не важен, по умолчанию `INFO`). `--` заканчивает
-опции, после него имя файла может начинаться с дефиса.
+`<logfile>` и `--file` — файлы, `--socket` — адреса. Обе опции можно повторять и сочетать:
+запись уходит во всё перечисленное. `--proto` задаёт транспорт того `--socket`, за которым стоит
+(`tcp` по умолчанию). `--level` (он же второй позиционный аргумент) — начальный порог, одно
+из `DEBUG, INFO, WARN, ERROR, FATAL` (регистр не важен, по умолчанию `INFO`). `--` заканчивает
+опции, после него имя файла может начинаться с дефиса. IPv6-адрес пишется в скобках:
+`--socket [::1]:5555`.
+
+```bash
+logger_app app.log --file audit.log --socket 127.0.0.1:5555 --socket [::1]:6666 --proto udp WARN
+```
 
 | Ввод | Действие |
 |---|---|
@@ -154,12 +164,31 @@ $ echo $?
 #include <logger/LoggerFactory.hpp>
 
 std::error_code ec;
-auto logger = Logger::createFileLogger("app.log", Logger::ELogLevel::Info, ec);
+auto logger = Logger::createLogger(Logger::SFileTarget{"app.log"}, Logger::ELogLevel::Info, ec);
 if (!logger) return report(ec);            // файл не открылся
 
 (void)logger->log(Logger::ELogLevel::Warn, "disk almost full");
 logger->setLevel(Logger::ELogLevel::Debug);
 ```
+
+### Цели записи
+
+`createLogger` принимает либо одну цель, либо список:
+
+```cpp
+const auto logger = Logger::createLogger(
+    {Logger::SFileTarget{"app.log"},
+     Logger::SSocketTarget{"127.0.0.1", 5555, Logger::ESocketProtocol::Tcp}},
+    Logger::ELogLevel::Info, ec
+);
+```
+
+Запись при этом **форматируется один раз** и передаётся каждой цели, поэтому штамп
+времени совпадает. Правила:
+
+- если хотя бы одну цель не удалось открыть, фабрика сразу записывает ошибку и возвращает `nullptr`.
+- если при записи отказала хотя бы одна цель, `log` возвращает `false`, а `ec` называет
+  первый отказ. Остальные цели запись всё равно получают.
 
 ### Уровни
 
@@ -214,9 +243,9 @@ logger->setLevel(Logger::ELogLevel::Debug);
 
 | Ситуация | Форма | Где |
 |---|---|---|
-| ошибка пересекает границу API, на неё можно среагировать | `std::error_code&` | `ILogger::log`, `createFileLogger` |
+| ошибка пересекает границу API, на неё можно среагировать | `std::error_code&` | `ILogger::log`, `createLogger` |
 | результат либо есть, либо нет | `std::optional` | `string2level`, `parseRecord` |
-| несколько исходов, текст адресован человеку | `kind`  | `parseUserInput`, `parseOptions` |
+| несколько исходов, текст адресован человеку | `std::variant`  | `parseUserInput`, `parseOptions` |
 
 `std::error_code` очищается в начале операции и остаётся непустым тогда и только тогда, когда
 операция вернула `false` (`nullptr`). Сообщение, отброшенное по уровню, — успех с чистым кодом.

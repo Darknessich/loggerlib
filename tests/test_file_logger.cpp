@@ -1,7 +1,8 @@
 #include <framework/TestFramework.hpp>
 #include <utils/TempFile.hpp>
 
-#include <FileLogger.hpp>
+#include <FileSink.hpp>
+#include <SinkLogger.hpp>
 #include <logger/LogLevel.hpp>
 #include <logger/LogRecord.hpp>
 #include <logger/LoggerFactory.hpp>
@@ -21,7 +22,7 @@ TEST(file_logger, creates_the_file_and_writes_a_record) {
     const TempFile file{"file_logger_creates.log"};
 
     std::error_code ec;
-    const auto logger = Logger::createFileLogger(file.path(), ELogLevel::Info, ec);
+    const auto logger = Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Info, ec);
     REQUIRE(logger != nullptr);
     CHECK(!ec);
 
@@ -41,7 +42,8 @@ TEST(file_logger, appends_to_an_existing_file) {
 
     for (int attempt = 0; attempt < 2; ++attempt) {
         std::error_code ec;
-        const auto logger = Logger::createFileLogger(file.path(), ELogLevel::Debug, ec);
+        const auto logger =
+            Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Debug, ec);
         REQUIRE(logger != nullptr);
         CHECK(logger->log(ELogLevel::Info, "line " + std::to_string(attempt)));
     }
@@ -53,7 +55,7 @@ TEST(file_logger, respects_the_level) {
     const TempFile file{"file_logger_level.log"};
 
     std::error_code ec;
-    const auto logger = Logger::createFileLogger(file.path(), ELogLevel::Warn, ec);
+    const auto logger = Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Warn, ec);
     REQUIRE(logger != nullptr);
 
     CHECK(logger->log(ELogLevel::Debug, "dropped"));
@@ -68,7 +70,8 @@ TEST(file_logger, set_level_takes_effect_immediately) {
     const TempFile file{"file_logger_setlevel.log"};
 
     std::error_code ec;
-    const auto logger = Logger::createFileLogger(file.path(), ELogLevel::Error, ec);
+    const auto logger =
+        Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Error, ec);
     REQUIRE(logger != nullptr);
 
     CHECK(logger->log(ELogLevel::Info, "before"));
@@ -89,7 +92,8 @@ TEST(file_logger, set_level_takes_effect_immediately) {
 
 TEST(file_logger, reports_open_failure) {
     std::error_code ec;
-    const auto logger = Logger::createFileLogger("no-such-dir/logger.log", ELogLevel::Info, ec);
+    const auto logger =
+        Logger::createLogger(Logger::SFileTarget{"no-such-dir/logger.log"}, ELogLevel::Info, ec);
 
     CHECK(logger == nullptr);
     CHECK(static_cast<bool>(ec));
@@ -104,7 +108,7 @@ TEST(file_logger, rejects_an_invalid_level) {
           static_cast<ELogLevel>(255),
           static_cast<ELogLevel>(-1)}) {
         std::error_code ec;
-        const auto logger = Logger::createFileLogger(file.path(), level, ec);
+        const auto logger = Logger::createLogger(Logger::SFileTarget{file.path()}, level, ec);
 
         CHECK(logger == nullptr);
         CHECK(ec == std::errc::invalid_argument);
@@ -114,7 +118,9 @@ TEST(file_logger, rejects_an_invalid_level) {
 }
 
 TEST(file_logger, reports_a_write_failure) {
-    Logger::FileLogger logger{std::ofstream{}, ELogLevel::Debug};
+    Logger::SinkLogger logger{
+        std::make_unique<Logger::FileSink>(std::ofstream{}), ELogLevel::Debug
+    };
 
     std::error_code ec;
     CHECK(!logger.log(ELogLevel::Info, "nowhere", ec));
@@ -125,7 +131,9 @@ TEST(file_logger, repeats_the_real_reason) {
     std::ofstream full{"/dev/full", std::ios::out | std::ios::app};
     if (!full.is_open()) return;
 
-    Logger::FileLogger logger{std::move(full), ELogLevel::Debug};
+    Logger::SinkLogger logger{
+        std::make_unique<Logger::FileSink>(std::move(full)), ELogLevel::Debug
+    };
 
     std::error_code first;
     std::error_code second;
@@ -140,7 +148,8 @@ TEST(file_logger, clears_the_error_code_on_success) {
     const TempFile file{"file_logger_clear_ec.log"};
 
     std::error_code ec;
-    const auto logger = Logger::createFileLogger(file.path(), ELogLevel::Debug, ec);
+    const auto logger =
+        Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Debug, ec);
     REQUIRE(logger != nullptr);
 
     std::error_code writeError = std::make_error_code(std::errc::io_error);
@@ -155,7 +164,8 @@ TEST(file_logger, serializes_concurrent_writes) {
     const TempFile file{"file_logger_threads.log"};
 
     std::error_code ec;
-    const auto logger = Logger::createFileLogger(file.path(), ELogLevel::Debug, ec);
+    const auto logger =
+        Logger::createLogger(Logger::SFileTarget{file.path()}, ELogLevel::Debug, ec);
     REQUIRE(logger != nullptr);
 
     std::vector<std::thread> workers;

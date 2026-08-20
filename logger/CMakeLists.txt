@@ -1,5 +1,7 @@
-set(LOGGER_SOURCES src/LogLevel.cpp src/LogRecord.cpp src/LoggerBase.cpp
-        src/FileLogger.cpp src/LoggerFactory.cpp)
+set(LOGGER_SOURCES src/LogLevel.cpp src/LogRecord.cpp src/SocketProtocol.cpp
+        src/SinkLogger.cpp src/FileSink.cpp src/MultiSink.cpp
+        src/net/Address.cpp src/net/Socket.cpp src/net/TcpSink.cpp
+        src/net/UdpSink.cpp src/LoggerFactory.cpp)
 
 include(GenerateExportHeader)
 

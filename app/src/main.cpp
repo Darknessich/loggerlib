@@ -14,9 +14,9 @@
 namespace {
     App::EExitCode runApplication(const App::SRun& options) {
         std::error_code ec;
-        const auto logger = Logger::createFileLogger(options.path, options.level, ec);
+        const auto logger = Logger::createLogger(options.targets, options.level, ec);
         if (!logger) {
-            std::cerr << "cannot open '" << options.path << "': " << ec.message() << '\n';
+            std::cerr << "cannot open the log: " << ec.message() << '\n';
             return App::EExitCode::LogUnavailable;
         }
 

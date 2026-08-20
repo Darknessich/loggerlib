@@ -14,7 +14,8 @@ namespace {
         const utils::TempFile file{"logger_shared_smoke.log"};
 
         std::error_code ec;
-        const auto logger = Logger::createFileLogger(file.path(), Logger::ELogLevel::Info, ec);
+        const auto logger =
+            Logger::createLogger(Logger::SFileTarget{file.path()}, Logger::ELogLevel::Info, ec);
         if (!logger || ec) return false;
         if (!logger->log(Logger::ELogLevel::Warn, message)) return false;
 
@@ -36,7 +37,8 @@ int main() {
     if (Logger::parseRecord("garbage")) return EXIT_FAILURE;
 
     std::error_code ec;
-    if (Logger::createFileLogger("", Logger::ELogLevel::Info, ec)) return EXIT_FAILURE;
+    if (Logger::createLogger(Logger::SFileTarget{""}, Logger::ELogLevel::Info, ec))
+        return EXIT_FAILURE;
     if (!ec) return EXIT_FAILURE;
 
     if (!writesThroughTheSharedLibrary()) return EXIT_FAILURE;
