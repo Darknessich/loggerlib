@@ -1,16 +1,11 @@
 #include "FileSink.hpp"
 
+#include <common/Errors.hpp>
+
 #include <cerrno>
 #include <utility>
 
 namespace Logger {
-    namespace {
-        std::error_code lastError() {
-            return errno != 0 ? std::error_code{errno, std::generic_category()}
-                              : std::make_error_code(std::errc::io_error);
-        }
-    } // namespace
-
     FileSink::FileSink(std::ofstream&& stream) : m_fstream{std::move(stream)} {}
 
     bool FileSink::writeLine(std::string_view line, std::error_code& ec) {
@@ -18,7 +13,7 @@ namespace Logger {
         errno = 0;
         m_fstream << line << '\n' << std::flush;
         if (m_fstream.good()) return true;
-        ec = lastError();
+        ec = Common::errnoError();
         return false;
     }
 
@@ -26,7 +21,7 @@ namespace Logger {
         errno = 0;
         std::ofstream stream{path, std::ios::out | std::ios::app};
         if (!stream.is_open()) {
-            ec = lastError();
+            ec = Common::errnoError();
             return nullptr;
         }
 

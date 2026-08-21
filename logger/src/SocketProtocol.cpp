@@ -1,6 +1,6 @@
 #include <logger/SocketProtocol.hpp>
 
-#include "Text.hpp"
+#include <common/Text.hpp>
 
 #include <array>
 #include <cstddef>
@@ -37,7 +37,7 @@ namespace Logger {
 
     std::optional<ESocketProtocol> string2protocol(std::string_view str) noexcept {
         for (const auto& entry : kProtocolNames) {
-            if (equalsIgnoreCase(entry.name, str)) {
+            if (Common::equalsIgnoreCase(entry.name, str)) {
                 return entry.protocol;
             }
         }

@@ -1,6 +1,6 @@
 #include <logger/LogLevel.hpp>
 
-#include "Text.hpp"
+#include <common/Text.hpp>
 
 #include <array>
 #include <cstddef>
@@ -41,7 +41,7 @@ namespace Logger {
 
     std::optional<ELogLevel> string2level(std::string_view str) noexcept {
         for (const auto& entry : kLevelNames) {
-            if (equalsIgnoreCase(entry.name, str)) {
+            if (Common::equalsIgnoreCase(entry.name, str)) {
                 return entry.level;
             }
         }

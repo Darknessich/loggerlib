@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace Logger {
-    /// @brief A log file; created when missing, never truncated.
+    /// @brief A log file, created when missing and never truncated.
     struct SFileTarget {
         std::string path; ///< Name of the log file
     };
@@ -30,10 +30,10 @@ namespace Logger {
     /// @brief Creates a logger writing every record to each of @p targets.
     /// @param targets  destinations, at least one
     /// @param level    initial threshold
-    /// @param ec       failure reason; std::errc::invalid_argument for an empty list or an
+    /// @param ec       failure reason, std::errc::invalid_argument for an empty list or an
     ///                 out-of-range @p level
     /// @return the logger, or nullptr on failure
-    /// @note A record is formatted once and offered to every target; the write fails when any
+    /// @note A record is formatted once and offered to every target. The write fails when any
     ///       of them fails, and ec then names the first failure.
     LOGGER_EXPORT std::unique_ptr<ILogger>
     createLogger(const std::vector<TTarget>& targets, ELogLevel level, std::error_code& ec);
@@ -41,7 +41,7 @@ namespace Logger {
     /// @brief Creates a thread-safe logger writing every record to @p target.
     /// @param target  destination
     /// @param level   initial threshold
-    /// @param ec      failure reason; a name that cannot be resolved carries a code of the
+    /// @param ec      failure reason, a name that cannot be resolved carries a code of the
     ///                getaddrinfo category
     /// @return the logger, or nullptr on failure
     /// @note A file is created when missing, never truncated, and flushed after every record.

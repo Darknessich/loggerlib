@@ -1,6 +1,6 @@
+#include <common/Overloaded.hpp>
 #include <core/ConsoleApp.hpp>
 #include <core/Options.hpp>
-#include <core/Overloaded.hpp>
 
 #include <logger/LoggerFactory.hpp>
 
@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
         const char* const program = argc > 0 ? argv[0] : "logger_app";
 
         const App::EExitCode code = std::visit(
-            App::SOverloaded{
+            Common::SOverloaded{
                 [](const App::SRun& options) { return runApplication(options); },
                 [program](const App::SShowHelp&) {
                     App::printUsage(program, std::cout);

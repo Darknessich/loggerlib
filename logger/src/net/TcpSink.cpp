@@ -1,5 +1,7 @@
 #include "TcpSink.hpp"
 
+#include <common/Errors.hpp>
+
 #include <algorithm>
 #include <cerrno>
 #include <utility>
@@ -13,13 +15,8 @@
 
 namespace Logger {
     namespace {
-        std::error_code lastError() {
-            return errno != 0 ? std::error_code{errno, std::generic_category()}
-                              : std::make_error_code(std::errc::io_error);
-        }
-
         // A dead peer must not kill the host application
-        void suppressSigpipe([[maybe_unused]] const Socket& socket) {
+        void suppressSigpipe([[maybe_unused]] const Common::Socket& socket) {
 #ifdef SO_NOSIGPIPE
             const int on = 1;
             (void)::setsockopt(socket.get(), SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
@@ -46,7 +43,7 @@ namespace Logger {
           m_cooldown{settings.initialCooldown} {}
 
     bool TcpSink::connect(std::error_code& ec) {
-        m_endpoints = resolve(m_host, m_port, SOCK_STREAM, ec);
+        m_endpoints = Common::resolve(m_host, m_port, SOCK_STREAM, ec);
         if (ec) return false;
 
         if (connectAny(ec)) {
@@ -63,14 +60,14 @@ namespace Logger {
 
         for (const auto& endpoint : m_endpoints) {
             errno = 0;
-            Socket socket{::socket(endpoint.family, endpoint.socktype, endpoint.protocol)};
+            Common::Socket socket{::socket(endpoint.family, endpoint.socktype, endpoint.protocol)};
             if (!socket.valid() || !socket.setNonBlocking()) {
-                ec = lastError();
+                ec = Common::errnoError();
                 continue;
             }
             suppressSigpipe(socket);
 
-            const auto* address = reinterpret_cast<const sockaddr*>(&endpoint.address);
+            const auto* address = Common::asSockaddr(endpoint);
             errno = 0;
             if (::connect(socket.get(), address, endpoint.length) == 0) {
                 m_socket = std::move(socket);
@@ -79,7 +76,7 @@ namespace Logger {
             }
 
             if (errno != EINPROGRESS) {
-                ec = lastError();
+                ec = Common::errnoError();
                 continue;
             }
 
@@ -91,7 +88,7 @@ namespace Logger {
             int pending = 0;
             auto length = static_cast<socklen_t>(sizeof(pending));
             if (::getsockopt(socket.get(), SOL_SOCKET, SO_ERROR, &pending, &length) != 0) {
-                ec = lastError();
+                ec = Common::errnoError();
                 continue;
             }
             if (pending != 0) {
@@ -117,7 +114,7 @@ namespace Logger {
 
         if (m_settings.resolveEvery > 0 && m_failures % m_settings.resolveEvery == 0) {
             std::error_code resolveError;
-            auto fresh = resolve(m_host, m_port, SOCK_STREAM, resolveError);
+            auto fresh = Common::resolve(m_host, m_port, SOCK_STREAM, resolveError);
             if (!resolveError) m_endpoints = std::move(fresh);
         }
 
@@ -149,7 +146,7 @@ namespace Logger {
                 return false;
             }
 
-            ec = lastError();
+            ec = Common::errnoError();
             return false;
         }
 

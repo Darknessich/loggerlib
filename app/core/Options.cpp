@@ -1,8 +1,8 @@
 #include "Options.hpp"
 
-#include <charconv>
+#include <common/Endpoint.hpp>
+
 #include <cstddef>
-#include <cstdint>
 #include <optional>
 #include <ostream>
 #include <string_view>
@@ -10,43 +10,11 @@
 
 namespace App {
     namespace {
-        struct SEndpointText {
-            std::string_view host;
-            std::string_view port;
-        };
-
-        std::optional<SEndpointText> splitEndpoint(std::string_view text) {
-            if (!text.empty() && text.front() == '[') {
-                const auto close = text.find("]:");
-                if (close == std::string_view::npos) return std::nullopt;
-                return SEndpointText{text.substr(1, close - 1), text.substr(close + 2)};
-            }
-
-            const auto colon = text.rfind(':');
-            if (colon == std::string_view::npos) return std::nullopt;
-
-            const std::string_view host = text.substr(0, colon);
-            if (host.find(':') != std::string_view::npos) return std::nullopt;
-
-            return SEndpointText{host, text.substr(colon + 1)};
-        }
-
-        std::optional<std::uint16_t> parsePort(std::string_view text) {
-            const char* const first = text.data();
-            const char* const last = first + text.size();
-
-            std::uint16_t port = 0;
-            const auto result = std::from_chars(first, last, port);
-            if (result.ec != std::errc{} || result.ptr != last || port == 0) return std::nullopt;
-            return port;
-        }
-
         struct SScan {
             std::vector<Logger::TTarget> targets;
             std::optional<std::size_t> lastSocket; // --proto applies to this target
             std::optional<std::string_view> levelText;
             bool protocolGiven = false;
-            bool pathTaken = false;
         };
 
         std::optional<SUsageError> addFile(std::string_view path, SScan& scan) {
@@ -57,7 +25,7 @@ namespace App {
         }
 
         std::optional<SUsageError> addSocket(std::string_view text, SScan& scan) {
-            const auto parts = splitEndpoint(text);
+            const auto parts = Common::splitHostPort(text);
             if (!parts)
                 return SUsageError{
                     "expected <host:port>, got: " + std::string{text} +
@@ -66,7 +34,7 @@ namespace App {
 
             if (parts->host.empty()) return SUsageError{"host must not be empty"};
 
-            const auto port = parsePort(parts->port);
+            const auto port = Common::parsePort(parts->port);
             if (!port) return SUsageError{"bad port: " + std::string{parts->port}};
 
             scan.lastSocket = scan.targets.size();
@@ -141,8 +109,7 @@ namespace App {
 
             if (optionsEnded || argument.empty() || argument.front() != '-') {
                 const auto error =
-                    scan.pathTaken ? setLevel(argument, scan) : addFile(argument, scan);
-                scan.pathTaken = true;
+                    scan.targets.empty() ? addFile(argument, scan) : setLevel(argument, scan);
                 if (error) return *error;
                 continue;
             }
@@ -171,8 +138,8 @@ namespace App {
                << " --help\n"
                   "\n"
                   "  <logfile>  file the log is appended to\n"
-                  "  --file     another log file; may be given several times\n"
-                  "  --socket   receiver the log is sent to; may be given several times\n"
+                  "  --file     another log file, may be given several times\n"
+                  "  --socket   receiver the log is sent to, may be given several times\n"
                   "  --proto    transport of the preceding --socket, one of ";
         printProtocols(stream);
         stream << " (default: " << Logger::protocol2string(Logger::SSocketTarget{}.protocol)

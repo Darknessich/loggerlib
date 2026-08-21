@@ -1,6 +1,6 @@
 #include "LogWorker.hpp"
 
-#include "Overloaded.hpp"
+#include <common/Overloaded.hpp>
 
 #include <exception>
 #include <system_error>
@@ -75,7 +75,7 @@ namespace App {
         TEvent event;
         while (m_queue.pop(event)) {
             std::visit(
-                SOverloaded{
+                Common::SOverloaded{
                     [this](const SWrite& write) { this->write(write); },
                     [this](const SSetLevel& setLevel) { m_logger.setLevel(setLevel.level); }
                 },

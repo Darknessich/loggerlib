@@ -1,7 +1,6 @@
 set(LOGGER_SOURCES src/LogLevel.cpp src/LogRecord.cpp src/SocketProtocol.cpp
         src/SinkLogger.cpp src/FileSink.cpp src/MultiSink.cpp
-        src/net/Address.cpp src/net/Socket.cpp src/net/TcpSink.cpp
-        src/net/UdpSink.cpp src/LoggerFactory.cpp)
+        src/net/TcpSink.cpp src/net/UdpSink.cpp src/LoggerFactory.cpp)
 
 include(GenerateExportHeader)
 
@@ -15,6 +14,7 @@ function(logger_configure target)
         $<INSTALL_INTERFACE:include>)
     target_include_directories(${target} PRIVATE src)
     target_link_libraries(${target} PUBLIC Threads::Threads)
+    target_link_libraries(${target} PRIVATE logger_net)
     target_compile_features(${target} PUBLIC cxx_std_17)
     set_target_properties(${target} PROPERTIES
         OUTPUT_NAME logger

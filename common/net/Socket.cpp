@@ -1,6 +1,6 @@
-#include "Socket.hpp"
+#include <common/net/Socket.hpp>
 
-namespace Logger {
+namespace Common {
     Socket::Socket(int fd) noexcept : m_fd{fd} {}
 
     Socket::~Socket() {
@@ -39,4 +39,4 @@ namespace Logger {
         const int flags = ::fcntl(m_fd, F_GETFL, 0);
         return flags >= 0 && ::fcntl(m_fd, F_SETFL, flags | O_NONBLOCK) == 0;
     }
-} // namespace Logger
+} // namespace Common

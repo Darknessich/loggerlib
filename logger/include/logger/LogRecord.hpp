@@ -40,12 +40,12 @@ namespace Logger {
     /// @brief Escapes the bytes that must not appear in a log line.
     /// @param message text to escape
     /// @return the escaped text
-    /// @note Backslash, tab, carriage return and newline become `\\`, `\t`, `\r` and `\n`;
-    ///       every other byte below 0x20, and 0x7F, becomes `\xNN`.
+    /// @note Backslash, tab, carriage return and newline become `\\`, `\t`, `\r` and `\n`.
+    ///       Every other byte below 0x20, and 0x7F, becomes `\xNN`.
     LOGGER_EXPORT std::string escapeMessage(std::string_view message);
 
     /// @brief Undoes escapeMessage().
     /// @param message escaped text
-    /// @return the original text; a broken escape sequence is kept as is
+    /// @return the original text, a broken escape sequence is kept as is
     LOGGER_EXPORT std::string unescapeMessage(std::string_view message);
 } // namespace Logger

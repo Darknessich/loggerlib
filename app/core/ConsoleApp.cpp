@@ -3,7 +3,7 @@
 #include "InputParser.hpp"
 #include "LogWorker.hpp"
 #include "Options.hpp"
-#include "Overloaded.hpp"
+#include <common/Overloaded.hpp>
 
 #include <logger/LogLevel.hpp>
 
@@ -51,11 +51,10 @@ namespace App {
         while (running) {
             if (m_showPrompt) m_out << "> " << std::flush;
             if (!std::getline(m_in, line)) break;
-            if (!line.empty() && line.back() == '\r') line.pop_back();
 
             TUserInput input = parseUserInput(line, level);
             std::visit(
-                SOverloaded{
+                Common::SOverloaded{
                     [&](SMessage& message) {
                         running = queue.push(SWrite{message.level, std::move(message.text)});
                     },

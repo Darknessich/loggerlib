@@ -9,7 +9,7 @@ function(logger_add_tests target library)
     target_include_directories(${target} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/logger/src)
-    target_link_libraries(${target} PRIVATE ${library})
+    target_link_libraries(${target} PRIVATE ${library} logger_common)
     logger_apply_warnings(${target})
 
     foreach(source IN LISTS ARGN)
@@ -24,13 +24,19 @@ function(logger_add_tests target library)
 endfunction()
 
 logger_add_tests(logger_tests logger_static
-    test_log_level.cpp test_log_record.cpp test_socket_protocol.cpp
+    test_text.cpp test_endpoint.cpp test_log_level.cpp test_log_record.cpp test_socket_protocol.cpp
     test_sink_logger.cpp test_multi_sink.cpp test_file_logger.cpp test_socket_logger.cpp)
 
 if(TARGET app_core)
     logger_add_tests(app_tests app_core
         test_options.cpp test_input_parser.cpp test_event_queue.cpp
         test_log_worker.cpp test_console_app.cpp)
+endif()
+
+if(TARGET collector_core)
+    logger_add_tests(collector_tests collector_core
+        test_collector_options.cpp test_line_reader.cpp test_statistics.cpp
+        test_collector_app.cpp test_receiver.cpp)
 endif()
 
 add_executable(logger_shared_smoke smoke/main.cpp utils/TempFile.cpp)

@@ -2,10 +2,10 @@
 
 #include "FileSink.hpp"
 #include "MultiSink.hpp"
-#include "Overloaded.hpp"
 #include "SinkLogger.hpp"
 #include "net/TcpSink.hpp"
 #include "net/UdpSink.hpp"
+#include <common/Overloaded.hpp>
 
 #include <utility>
 
@@ -13,7 +13,7 @@ namespace Logger {
     namespace {
         std::unique_ptr<ISink> openSink(const TTarget& target, std::error_code& ec) {
             return std::visit(
-                SOverloaded{
+                Common::SOverloaded{
                     [&](const SFileTarget& file) { return openFileSink(file.path, ec); },
                     [&](const SSocketTarget& socket) -> std::unique_ptr<ISink> {
                         switch (socket.protocol) {

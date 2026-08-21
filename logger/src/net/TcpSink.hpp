@@ -1,8 +1,9 @@
 #pragma once
 
 #include "../ISink.hpp"
-#include "Address.hpp"
-#include "Socket.hpp"
+
+#include <common/net/Address.hpp>
+#include <common/net/Socket.hpp>
 
 #include <chrono>
 #include <cstdint>
@@ -37,8 +38,8 @@ namespace Logger {
         std::uint16_t m_port;
         STcpSettings m_settings;
 
-        std::vector<SEndpoint> m_endpoints;
-        Socket m_socket;
+        std::vector<Common::SEndpoint> m_endpoints;
+        Common::Socket m_socket;
         std::string m_frame;
 
         std::error_code m_lastError;

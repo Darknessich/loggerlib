@@ -22,7 +22,7 @@ namespace App {
 
     using TOptions = std::variant<SRun, SShowHelp, SUsageError>;
 
-    // A dash starts an option; "--" ends the options. Targets keep the order they were given in.
+    // A dash starts an option, "--" ends them
     TOptions parseOptions(int argc, const char* const* argv);
     void printUsage(const char* program, std::ostream& stream);
     void printLevels(std::ostream& stream);

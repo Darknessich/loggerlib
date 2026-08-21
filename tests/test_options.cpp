@@ -149,6 +149,22 @@ TEST(options, takes_a_file_and_a_socket_together) {
     CHECK_EQ(std::get<SRun>(parsed).level, ELogLevel::Warn);
 }
 
+TEST(options, a_level_after_a_socket_is_not_a_file) {
+    const auto parsed = parse({"logger_app", "--socket", "host:1", "DEBUG"});
+
+    REQUIRE(std::holds_alternative<SRun>(parsed));
+    REQUIRE_EQ(std::get<SRun>(parsed).targets.size(), std::size_t{1});
+    CHECK_EQ(socketTarget(parsed).host, "host");
+    CHECK_EQ(std::get<SRun>(parsed).level, ELogLevel::Debug);
+}
+
+TEST(options, a_second_bare_argument_is_read_as_a_level) {
+    const auto parsed = parse({"logger_app", "--file", "a.log", "b.log"});
+
+    REQUIRE(std::holds_alternative<SUsageError>(parsed));
+    CHECK(std::get<SUsageError>(parsed).text.find("b.log") != std::string::npos);
+}
+
 TEST(options, takes_a_bracketed_ipv6_address) {
     const auto parsed = parse({"logger_app", "--socket", "[::1]:5555"});
 

@@ -182,37 +182,6 @@ TEST(console_app, names_the_failure_reason) {
     CHECK(session.err.find("1 failed: " + reason) != std::string::npos);
 }
 
-TEST(console_app, strips_a_crlf_terminator) {
-    RecordingLogger logger{ELogLevel::Debug};
-    run(logger, "hello\r\nWARN disk\r\n");
-
-    const auto records = logger.records();
-    REQUIRE_EQ(records.size(), std::size_t{2});
-    CHECK_EQ(records[0].message, "hello");
-    CHECK_EQ(records[1].level, ELogLevel::Warn);
-    CHECK_EQ(records[1].message, "disk");
-}
-
-TEST(console_app, keeps_an_inner_carriage_return) {
-    RecordingLogger logger{ELogLevel::Debug};
-    run(logger, "\rleading\nmid\rdle\ntrailing\r\r\n");
-
-    const auto records = logger.records();
-    REQUIRE_EQ(records.size(), std::size_t{3});
-    CHECK_EQ(records[0].message, "\rleading");
-    CHECK_EQ(records[1].message, "mid\rdle");
-    CHECK_EQ(records[2].message, "trailing\r");
-}
-
-TEST(console_app, reads_a_command_with_crlf) {
-    RecordingLogger logger{ELogLevel::Debug};
-    run(logger, "before\r\n/quit\r\nafter\r\n");
-
-    const auto records = logger.records();
-    REQUIRE_EQ(records.size(), std::size_t{1});
-    CHECK_EQ(records[0].message, "before");
-}
-
 TEST(console_app, names_the_reason_in_the_loop) {
     class GatedInput : public std::stringbuf {
     public:

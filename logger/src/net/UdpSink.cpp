@@ -1,5 +1,7 @@
 #include "UdpSink.hpp"
-#include "Address.hpp"
+
+#include <common/Errors.hpp>
+#include <common/net/Address.hpp>
 
 #include <cerrno>
 #include <utility>
@@ -11,14 +13,7 @@
 #endif
 
 namespace Logger {
-    namespace {
-        std::error_code lastError() {
-            return errno != 0 ? std::error_code{errno, std::generic_category()}
-                              : std::make_error_code(std::errc::io_error);
-        }
-    } // namespace
-
-    UdpSink::UdpSink(Socket socket) noexcept : m_socket{std::move(socket)} {}
+    UdpSink::UdpSink(Common::Socket socket) noexcept : m_socket{std::move(socket)} {}
 
     bool UdpSink::writeLine(std::string_view line, std::error_code& ec) {
         m_frame.assign(line);
@@ -32,28 +27,28 @@ namespace Logger {
 
         if (sent == static_cast<ssize_t>(m_frame.size())) return true;
 
-        ec = sent < 0 ? lastError() : std::make_error_code(std::errc::message_size);
+        ec = sent < 0 ? Common::errnoError() : std::make_error_code(std::errc::message_size);
         return false;
     }
 
     std::unique_ptr<ISink>
     openUdpSink(const std::string& host, std::uint16_t port, std::error_code& ec) {
-        const auto endpoints = resolve(host, port, SOCK_DGRAM, ec);
+        const auto endpoints = Common::resolve(host, port, SOCK_DGRAM, ec);
         if (ec) return nullptr;
 
         ec = std::make_error_code(std::errc::host_unreachable);
         for (const auto& endpoint : endpoints) {
             errno = 0;
-            Socket socket{::socket(endpoint.family, endpoint.socktype, endpoint.protocol)};
+            Common::Socket socket{::socket(endpoint.family, endpoint.socktype, endpoint.protocol)};
             if (!socket.valid()) {
-                ec = lastError();
+                ec = Common::errnoError();
                 continue;
             }
 
-            const auto* address = reinterpret_cast<const sockaddr*>(&endpoint.address);
+            const auto* address = Common::asSockaddr(endpoint);
             errno = 0;
             if (::connect(socket.get(), address, endpoint.length) != 0) {
-                ec = lastError();
+                ec = Common::errnoError();
                 continue;
             }
 

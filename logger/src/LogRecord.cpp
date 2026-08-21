@@ -1,6 +1,7 @@
 #include <logger/LogRecord.hpp>
 
-#include <charconv>
+#include <common/Text.hpp>
+
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
@@ -12,23 +13,19 @@ namespace {
     constexpr std::size_t kStampSize = sizeof(kUnknownStamp) - 1;
 
     bool parseInt(std::string_view text, int& out) noexcept {
-        const char* const first = text.data();
-        const char* const last = text.data() + text.size();
-        const auto result = std::from_chars(first, last, out);
-        return result.ec == std::errc{} && result.ptr == last;
-    }
+        const auto value = Common::parseNumber<int>(text);
+        if (!value) return false;
 
-    // Not std::isdigit: undefined on a negative char, and locale-dependent
-    constexpr bool isDigit(char c) noexcept {
-        return '0' <= c && c <= '9';
+        out = *value;
+        return true;
     }
 
     std::optional<std::chrono::system_clock::time_point> parseTimestamp(std::string_view line) {
         if (line.size() != kStampSize) return std::nullopt;
 
         for (std::size_t i = 0; i < kStampSize; ++i) {
-            const bool ok =
-                isDigit(kUnknownStamp[i]) ? isDigit(line[i]) : kUnknownStamp[i] == line[i];
+            const bool ok = Common::isDigit(kUnknownStamp[i]) ? Common::isDigit(line[i])
+                                                              : kUnknownStamp[i] == line[i];
             if (!ok) return std::nullopt;
         }
 

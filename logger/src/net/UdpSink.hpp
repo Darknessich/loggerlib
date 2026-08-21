@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../ISink.hpp"
-#include "Socket.hpp"
+
+#include <common/net/Socket.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -11,12 +12,12 @@ namespace Logger {
     // One record per datagram
     class UdpSink final : public ISink {
     public:
-        explicit UdpSink(Socket socket) noexcept;
+        explicit UdpSink(Common::Socket socket) noexcept;
 
         bool writeLine(std::string_view line, std::error_code& ec) override;
 
     private:
-        Socket m_socket;
+        Common::Socket m_socket;
         std::string m_frame;
     };
 
